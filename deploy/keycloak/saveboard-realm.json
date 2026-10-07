@@ -1,0 +1,27 @@
+{
+  "realm": "saveboard",
+  "enabled": true,
+  "displayName": "Saveboard",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "sslRequired": "none",
+  "smtpServer": { "host": "mailpit", "port": "1025", "from": "noreply@saveboard.local", "fromDisplayName": "Saveboard", "auth": "false", "starttls": "false" },
+  "clients": [{
+    "clientId": "saveboard-bff",
+    "name": "Saveboard BFF",
+    "protocol": "openid-connect",
+    "publicClient": false,
+    "secret": "${OIDC_CLIENT_SECRET}",
+    "standardFlowEnabled": true,
+    "directAccessGrantsEnabled": false,
+    "serviceAccountsEnabled": false,
+    "redirectUris": ["http://localhost:${HTTP_PORT}/auth/callback"],
+    "webOrigins": ["http://localhost:${HTTP_PORT}"],
+    "attributes": { "pkce.code.challenge.method": "S256" },
+    "defaultClientScopes": ["profile", "email", "roles"]
+  }]
+}

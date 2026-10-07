@@ -1,0 +1,6 @@
+packages:
+  - capture
+
+allowBuilds:
+  esbuild: true
+saveExact: true

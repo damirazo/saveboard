@@ -1,0 +1,56 @@
+{
+  "name": "@saveboard/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "pnpm --filter @saveboard/api-client build && tsc --noEmit && vite build",
+    "typecheck": "pnpm --filter @saveboard/api-client typecheck && tsc --noEmit",
+    "lint": "eslint src packages e2e *.ts",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "api:generate": "pnpm --filter @saveboard/api-client generate",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
+    "@radix-ui/react-slot": "^1.4.0",
+    "@saveboard/api-client": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.104.1",
+    "@tanstack/react-router": "^1.170.41",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-hook-form": "^7.89.0",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "typescript-eslint": "^8.71.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "jsdom": "^30.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  },
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  }
+}

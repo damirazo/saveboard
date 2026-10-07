@@ -1,0 +1,27 @@
+{
+  "name": "@saveboard/backend",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "dev": "go run ./cmd/api",
+    "dev:worker": "go run ./cmd/worker",
+    "dev:capture": "pnpm --filter @saveboard/capture dev",
+    "build": "go build ./cmd/... && pnpm --filter @saveboard/capture build",
+    "typecheck": "pnpm --filter @saveboard/capture typecheck",
+    "lint": "go vet ./... && eslint capture/src",
+    "test": "go test ./... && node --test scripts/*.test.mjs && pnpm --filter @saveboard/capture test",
+    "test:integration": "go test -tags=integration -count=1 ./internal/notes",
+    "api:generate": "go run ./cmd/openapi",
+    "migrate": "go run ./cmd/migrate",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "typescript-eslint": "^8.71.1"
+  }
+}

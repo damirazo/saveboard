@@ -1,0 +1,38 @@
+version: '3'
+
+tasks:
+  setup:
+    desc: Install locked dependencies and create local credentials
+    cmds:
+      - pnpm run bootstrap
+  up:
+    desc: Build and start the local Compose stack
+    cmds: [pnpm infra:up]
+  down:
+    cmds: [pnpm infra:down]
+  logs:
+    cmds: [pnpm infra:logs]
+  generate:
+    cmds: [pnpm api:generate]
+  model:init:
+    desc: Download the digest-checked BGE-M3 model and verify embeddings
+    cmds: [docker compose --env-file .env -f deploy/compose.yaml --profile embeddings run --rm model-init]
+  smoke:
+    desc: Check the running Compose stack over HTTP
+    cmds: [node scripts/smoke-compose.mjs]
+  check:
+    cmds:
+      - pnpm typecheck
+      - pnpm lint
+      - pnpm test
+      - pnpm build
+      - node scripts/check-contract.mjs
+  test:integration:
+    desc: PostgreSQL rollback/commit and River worker test (requires Docker)
+    cmds: [pnpm --dir backend test:integration]
+  dev:web:
+    cmds: [pnpm dev]
+  dev:api:
+    cmds: [pnpm --dir backend dev]
+  dev:worker:
+    cmds: [pnpm --dir backend dev:worker]

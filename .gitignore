@@ -1,0 +1,40 @@
+# Dependencies and caches
+node_modules/
+.pnpm-store/
+.cache/
+.vite/
+
+# Build output
+dist/
+bin/
+*.exe
+*.test
+*.tsbuildinfo
+
+# Local secrets (keep configuration templates)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and test artifacts
+*.log
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Editor and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+tmp/
+temp/

@@ -1,0 +1,23 @@
+{
+  "name": "saveboard",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "bootstrap": "node scripts/init-env.mjs && go -C backend mod download && pnpm --dir backend install --frozen-lockfile && pnpm --dir frontend install --frozen-lockfile",
+    "dev": "pnpm --dir frontend dev",
+    "build": "pnpm --dir backend build && pnpm --dir frontend build",
+    "typecheck": "pnpm --dir backend typecheck && pnpm --dir frontend typecheck",
+    "lint": "pnpm --dir backend lint && pnpm --dir frontend lint",
+    "test": "pnpm --dir backend test && pnpm --dir frontend test",
+    "test:e2e": "pnpm --dir frontend test:e2e",
+    "task": "go -C tools tool task --dir ..",
+    "api:generate": "node scripts/sync-api.mjs",
+    "infra:up": "docker compose --env-file .env -f deploy/compose.yaml up -d --build",
+    "infra:down": "docker compose --env-file .env -f deploy/compose.yaml down",
+    "infra:logs": "docker compose --env-file .env -f deploy/compose.yaml logs -f"
+  }
+}
