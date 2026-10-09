@@ -36,6 +36,7 @@ type Post struct {
 	bun.BaseModel `bun:"table:posts"`
 	ID            uuid.UUID  `bun:"id,pk,type:uuid,default:gen_random_uuid()" json:"id"`
 	AuthorID      uuid.UUID  `bun:"author_id,type:uuid,notnull" json:"author_id"`
+	Title         string     `bun:"title,notnull,default:''" json:"title"`
 	CreatedAt     time.Time  `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt     time.Time  `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
 	Status        Status     `bun:"status,notnull,default:'draft'" json:"status"`
@@ -68,6 +69,7 @@ type Photo struct {
 	PostID        uuid.UUID `bun:"post_id,type:uuid,notnull" json:"post_id"`
 	Type          Type      `bun:"type,notnull,default:'photo'" json:"-"`
 	URL           string    `bun:"url,notnull" json:"url"`
+	Position      int       `bun:"position,notnull,default:0" json:"position"`
 }
 
 // Tag is global; the legacy notes subsystem has its own owner-scoped tags.

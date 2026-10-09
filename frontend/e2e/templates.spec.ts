@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
+import { mockPosts } from './post-fixtures';
 
 test.beforeEach(async ({ page }) => {
+  await mockPosts(page);
   await page.route('**/api/v1/auth/**', async route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/login') && route.request().postDataJSON().password !== 'test-password') {
@@ -29,9 +31,8 @@ test('guest and member use shared navigation without exposing private sample pos
   await login(page);
   await expect(page.locator('article')).toHaveCount(3);
   await page.getByRole('link', { name: 'Избранное', exact: true }).click();
-  await expect(page.locator('article')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Убрать из избранного' }).click();
-  await expect(page.getByRole('status')).toContainText('Публикаций не найдено');
+  await expect(page.locator('article')).toHaveCount(0);
+  await expect(page.getByRole('status')).toContainText('Этот раздел появится позже');
   await page.getByRole('link', { name: 'Все публикации', exact: true }).click();
   await page.screenshot({ path: 'test-results/member-desktop.png', fullPage: true });
 });

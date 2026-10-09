@@ -9,12 +9,14 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"saveboard/internal/identity"
+	"saveboard/internal/posts"
 	"time"
 )
 
 type Dependencies struct {
 	Ping          func(context.Context) error
 	Auth          *identity.AuthService
+	Posts         *posts.Service
 	SecureCookies bool
 }
 type HealthOutput struct {
@@ -41,7 +43,11 @@ func New(deps Dependencies) (http.Handler, huma.API) {
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 			w.Header().Set("Cache-Control", "no-store")
 			w.Header().Set("Referrer-Policy", "no-referrer")
-			req.Body = http.MaxBytesReader(w, req.Body, 1<<20)
+			limit := int64(1 << 20)
+			if req.Method == http.MethodPost && req.URL.Path == "/api/v1/photos" {
+				limit = 14 << 20
+			}
+			req.Body = http.MaxBytesReader(w, req.Body, limit)
 			next.ServeHTTP(w, req)
 		})
 	})
@@ -51,6 +57,7 @@ func New(deps Dependencies) (http.Handler, huma.API) {
 	c.SchemasPath = "/api/schemas"
 	a := humachi.New(r, c)
 	registerAuth(a, deps)
+	registerPosts(a, deps)
 	huma.Get(a, "/api/health/live", func(ctx context.Context, _ *struct{}) (*HealthOutput, error) {
 		out := &HealthOutput{}
 		out.Body.Status = "ok"

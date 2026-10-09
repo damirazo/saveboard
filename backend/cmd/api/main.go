@@ -9,6 +9,7 @@ import (
 	"saveboard/internal/platform/db"
 	"saveboard/internal/platform/httpserver"
 	"saveboard/internal/platform/telemetry"
+	"saveboard/internal/posts"
 	"saveboard/internal/transport/httpapi"
 	"syscall"
 	"time"
@@ -43,6 +44,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, _ := httpapi.New(httpapi.Dependencies{Ping: database.PingContext, Auth: auth, SecureCookies: cfg.SecureCookies})
+	handler, _ := httpapi.New(httpapi.Dependencies{Ping: database.PingContext, Auth: auth, Posts: posts.NewService(database.DB), SecureCookies: cfg.SecureCookies})
 	return httpserver.Run(ctx, cfg.HTTPAddr, handler)
 }

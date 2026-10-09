@@ -1,0 +1,55 @@
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { ImagePlus, Link2, NotebookPen, X } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { TagPicker } from './tag-picker';
+import { usePhotoURLs } from './use-photo-urls';
+import { apiError, savePost, uploadPhoto, type Photo, type PostWrite, type SavedPost } from './post-api';
+const MarkdownEditor = lazy(() => import('./markdown-editor'));
+
+export function PostForm({ post, onClose, onSaved }: { post?: SavedPost; onClose: () => void; onSaved: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [title, setTitle] = useState(post?.title ?? '');
+  const [type, setType] = useState<PostWrite['type']>((post?.type as PostWrite['type']) ?? 'note');
+  const [visibility, setVisibility] = useState<PostWrite['visibility']>(post?.visibility === 'public' ? 'public' : 'private');
+  const [tags, setTags] = useState<PostWrite['tags']>(post?.tags.map(t => ({ id: t.id, title: t.title })) ?? []);
+  const [markdown, setMarkdown] = useState(post?.markdown ?? ''); const [url, setURL] = useState(post?.url ?? '');
+  const [photos, setPhotos] = useState<Photo[]>(post?.photos ?? []); const urls = usePhotoURLs(photos);
+  const [busy, setBusy] = useState(false); const [uploading, setUploading] = useState(false); const [error, setError] = useState('');
+  const uploadLock = useRef(false);
+  useEffect(() => { const element = dialog.current; element?.showModal(); return () => element?.close(); }, []);
+  const dropzone = useDropzone({ disabled: busy || uploading, multiple: true, maxFiles: 32, maxSize: 10 * 1024 * 1024,
+    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/gif': ['.gif'], 'image/bmp': ['.bmp'], 'image/webp': ['.webp'] },
+    onDrop: async (files, rejected) => {
+      if (uploadLock.current) return;
+      if (rejected.length || photos.length + files.length > 32) { setError('До 32 фотографий: JPG, PNG, GIF, BMP, WebP; до 10 МБ каждая.'); return; }
+      uploadLock.current = true; setUploading(true); setError('');
+      try { for (const file of files) { const p = await uploadPhoto(file); setPhotos(current => [...current, p]); } }
+      catch (e) { setError(apiError(e).message); } finally { uploadLock.current = false; setUploading(false); }
+    },
+  });
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); if (busy || uploading) return;
+    if (!tags.length) { setError('Добавьте хотя бы один тег.'); return; }
+    if (type === 'photo' && !photos.length) { setError('Добавьте хотя бы одну фотографию.'); return; }
+    setBusy(true); setError('');
+    try { await savePost({ title, type, visibility, tags, markdown: type === 'note' ? markdown : '', url: type === 'link' ? url : '', photo_ids: type === 'photo' ? photos.map(p => p.id) : [] }, post?.id); onSaved(); }
+    catch (e) { setError(apiError(e).message); } finally { setBusy(false); }
+  }
+  return <dialog ref={dialog} className="post-dialog" aria-labelledby="post-form-title" onCancel={e => { e.preventDefault(); if (!busy && !uploading) onClose(); }}>
+    <form onSubmit={submit}>
+      <header><div><small>ВАША БИБЛИОТЕКА</small><h2 id="post-form-title">{post ? 'Редактировать пост' : 'Новая публикация'}</h2></div><Button variant="icon" aria-label="Закрыть форму" disabled={busy || uploading} onClick={onClose}><X /></Button></header>
+      <fieldset disabled={busy || uploading}>
+        <label>Наименование *<input autoFocus required maxLength={200} value={title} onChange={e => setTitle(e.target.value)} placeholder="Дайте публикации название" /></label>
+        <div className="post-type-switch" role="group" aria-label="Тип поста">{([{ value: 'note', label: 'Заметка', Icon: NotebookPen }, { value: 'link', label: 'Ссылка', Icon: Link2 }, { value: 'photo', label: 'Фото', Icon: ImagePlus }] as const).map(({ value, label, Icon }) => <Button key={value} variant="outline" aria-pressed={type === value} onClick={() => setType(value)}><Icon size={18} />{label}</Button>)}</div>
+        <label>Кто увидит пост<select value={visibility} onChange={e => setVisibility(e.target.value as PostWrite['visibility'])}><option value="private">Только я</option><option value="public">Все — публичная лента</option></select></label>
+        <TagPicker value={tags} onChange={setTags} disabled={busy || uploading} />
+        {type === 'note' && <Suspense fallback={<p>Загрузка редактора…</p>}><MarkdownEditor value={markdown} onChange={setMarkdown} disabled={busy || uploading} /></Suspense>}
+        {type === 'link' && <label>Адрес ссылки *<input type="url" required maxLength={4096} value={url} onChange={e => setURL(e.target.value)} placeholder="https://example.com" /></label>}
+        {type === 'photo' && <section><div {...dropzone.getRootProps({ className: 'photo-dropzone', 'aria-label': 'Добавить фотографии' })}><input {...dropzone.getInputProps()} /><ImagePlus /><strong>{uploading ? 'Проверяем и загружаем…' : 'Перетащите фотографии или выберите файлы'}</strong><small>До 32 фото · JPG, PNG, GIF, BMP, WebP · до 10 МБ / 20 Мп · GIF: первый кадр</small></div><div className="photo-grid upload-grid">{photos.map((p, i) => <div className="upload-preview" key={p.id}>{urls[p.id] ? <img src={urls[p.id]} alt={`Загруженное фото ${i + 1}`} /> : <span>Загружаем превью…</span>}<button type="button" aria-label={`Удалить фото ${i + 1}`} onClick={() => setPhotos(current => current.filter(x => x.id !== p.id))}><X size={16} /></button></div>)}</div><small>{photos.length} / 32</small></section>}
+      </fieldset>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <footer><Button variant="outline" disabled={busy || uploading} onClick={onClose}>Отмена</Button><Button type="submit" disabled={busy || uploading}>{busy ? 'Сохраняем…' : post ? 'Сохранить изменения' : 'Опубликовать'}</Button></footer>
+    </form>
+  </dialog>;
+}

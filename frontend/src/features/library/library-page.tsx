@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@saveboard/api-client';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { AppShell } from '../../components/layout/app-shell';
 import { guestViewer } from '../../components/layout/viewer';
 import { Breadcrumbs } from '../../components/navigation/breadcrumbs';
@@ -7,44 +12,60 @@ import { Pagination } from '../../components/navigation/pagination';
 import { PageHeading, EmptyState } from '../../components/content/page-heading';
 import { SearchPanel } from '../../components/content/search-panel';
 import { FilterGroup, FilterPanel } from '../../components/content/filter-panel';
-import { PostCard } from '../../components/content/post-card';
+import { TagList } from '../../components/content/post-card';
 import { Button } from '../../components/ui/button';
 import { useSession } from '../auth/use-session';
-import { demoPosts } from './demo-posts';
+import { PhotoGallery } from './photo-gallery';
+import { PostForm } from './post-form';
+import { apiError, type SavedPost } from './post-api';
 
 export type LibrarySection = 'all' | 'favorites' | 'archives';
-const filters = [{ value: 'all', label: 'Все' }, { value: 'web', label: 'Страницы' }, { value: 'text', label: 'Заметки' }, { value: 'file', label: 'Файлы' }];
-const sortOptions = [{ value: 'new', label: 'Сначала новые' }, { value: 'old', label: 'Сначала старые' }];
-
+const filters = [{ value: '', label: 'Все' }, { value: 'link', label: 'Ссылки' }, { value: 'note', label: 'Заметки' }, { value: 'photo', label: 'Фото' }];
 export function LibraryPage({ member = false, section = 'all' }: { member?: boolean; section?: LibrarySection }) {
-  const session = useSession();
-  const [kind, setKind] = useState('all');
-  const [query, setQuery] = useState('');
-  const [favorites, setFavorites] = useState([1]);
-  const [sort, setSort] = useState('new');
-  const [paging, setPaging] = useState({ page: 1, size: 10, scope: '' });
-  function changeQuery(value: string) { setQuery(value); setPaging(current => ({ ...current, page: 1 })); }
-  function changeKind(value: string) { setKind(value); setPaging(current => ({ ...current, page: 1 })); }
-  function changeSort(value: string) { setSort(value); setPaging(current => ({ ...current, page: 1 })); }
-  const scope = JSON.stringify([member, section, kind, query, sort]);
-  const visible = demoPosts.filter(p => (member || p.public) && (kind === 'all' || p.kind === kind) && (section !== 'favorites' || favorites.includes(p.id)) && (section !== 'archives' || p.kind === 'web') && `${p.title} ${p.text} ${p.tags.join(' ')}`.toLowerCase().includes(query.toLowerCase()));
-  if (sort === 'old') visible.reverse();
-  const page = Math.min(paging.scope === scope ? paging.page : 1, Math.max(1, Math.ceil(visible.length / paging.size)));
-  const pagePosts = visible.slice((page - 1) * paging.size, page * paging.size);
+  const session = useSession(); const cache = useQueryClient(); const navigate = useNavigate();
+  const [kind, setKind] = useState(''); const [query, setQuery] = useState(''); const [sort, setSort] = useState<'new' | 'old'>('new');
+  const [paging, setPaging] = useState({ page: 1, size: 10 });
+  const [editing, setEditing] = useState<SavedPost | 'new' | null>(null);
+  const [deleting, setDeleting] = useState(''); const [error, setError] = useState('');
+  const enabled = section === 'all' && (!member || !!session);
+  const posts = useQuery({ queryKey: ['posts', session?.tokens.session_id, member, kind, query, sort, paging, section], enabled,
+    queryFn: async ({ signal }) => {
+      const result = await apiClient.GET('/api/v1/posts', { params: { query: { scope: member ? 'mine' : 'public', type: kind ? kind as 'note' | 'link' | 'photo' : undefined, q: query, sort, page: paging.page, size: paging.size } }, signal });
+      if (result.error || !result.data) throw apiError(result.error); return result.data;
+    },
+  });
+  const me = useQuery({ queryKey: ['post-viewer', session?.tokens.session_id], enabled: !!session, queryFn: async () => {
+    const r = await apiClient.GET('/api/v1/auth/me'); if (r.error) throw apiError(r.error); return r.data;
+  } });
+  const items: SavedPost[] = enabled ? (posts.data?.items ?? []).map(p => ({ ...p, tags: p.tags ?? [], photos: p.photos ?? [] })) : []; const total = enabled ? posts.data?.total ?? 0 : 0;
+  async function refresh() { await cache.invalidateQueries({ queryKey: ['posts'] }); }
+  async function remove(post: SavedPost) {
+    if (!window.confirm(`Переместить «${post.title}» в черновики? Пост исчезнет из лент.`)) return;
+    setDeleting(post.id); setError('');
+    try { const r = await apiClient.DELETE('/api/v1/posts/{id}', { params: { path: { id: post.id } } }); if (r.error) throw apiError(r.error); setPaging(p => ({ ...p, page: 1 })); await refresh(); }
+    catch (e) { setError(apiError(e).message); } finally { setDeleting(''); }
+  }
   const title = !member ? 'Интересное рядом' : section === 'favorites' ? 'Избранное' : section === 'archives' ? 'Архив страниц' : 'Все публикации';
-
   return <AppShell viewer={session ? { kind: 'member', username: session.login, displayName: session.login } : guestViewer}>
     <Breadcrumbs items={[{ label: member ? 'Личное пространство' : 'Сообщество' }, { label: member ? 'Библиотека' : 'Публичная лента' }]} />
-    {session && <nav className="feed-switcher" aria-label="Выбор ленты">
-      <Link to="/feed" search={{ section: 'all' }} aria-current={member ? 'page' : undefined}>Моя лента</Link>
-      <Link to="/" aria-current={!member ? 'page' : undefined}>Публичная лента</Link>
-    </nav>}
-    <PageHeading title={title} count={visible.length} description={member ? 'Ссылки, мысли и материалы, к которым хочется вернуться.' : 'Открытые подборки, полезные ссылки и идеи сообщества.'} actions={!session && <Button asChild><Link to="/register">Создать свою библиотеку</Link></Button>} />
-    <SearchPanel value={query} onChange={changeQuery} label="Поиск публикаций" placeholder="Поиск по названию, тексту или тегу…" />
-    <FilterPanel sort={{ value: sort, options: sortOptions, onChange: changeSort }}><FilterGroup label="Тип контента" options={filters} value={kind} onChange={changeKind} /></FilterPanel>
-    <div className="post-feed">{pagePosts.map(post => <PostCard key={post.id} post={post} showVisibility={member} favorite={favorites.includes(post.id)} onFavoriteChange={member ? () => { setFavorites(current => current.includes(post.id) ? current.filter(id => id !== post.id) : [...current, post.id]); setPaging(current => ({ ...current, page: 1, scope })); } : undefined} onTagClick={changeQuery} />)}</div>
-    {visible.length === 0 && <EmptyState>Публикаций не найдено. Попробуйте другой запрос или фильтр.</EmptyState>}
-    <Pagination total={visible.length} page={page} pageSize={paging.size} pageSizes={[2, 10, 20, 50]} onPageChange={next => setPaging(current => ({ ...current, page: next, scope }))} onPageSizeChange={size => setPaging({ page: 1, size, scope })} />
-    <p className="demo-caption">Демонстрационные публикации · {member ? 'персональная лента' : 'публичная лента'}</p>
+    {session && <nav className="feed-switcher" aria-label="Выбор ленты"><Link to="/feed" search={{ section: 'all' }} aria-current={member ? 'page' : undefined}>Моя лента</Link><Link to="/" aria-current={!member ? 'page' : undefined}>Публичная лента</Link></nav>}
+    <PageHeading title={title} count={total} description={member ? 'Ссылки, мысли и фотографии, к которым хочется вернуться.' : 'Открытые публикации сообщества.'} actions={session ? <Button onClick={() => setEditing('new')}><Plus size={18} />Создать пост</Button> : <Button asChild><Link to="/register">Создать свою библиотеку</Link></Button>} />
+    {section !== 'all' ? <EmptyState>Этот раздел появится позже. Ваши посты доступны в разделе «Все публикации».</EmptyState> : <>
+      <SearchPanel value={query} onChange={v => { setQuery(v); setPaging(p => ({ ...p, page: 1 })); }} label="Поиск публикаций" placeholder="Поиск по названию, тексту или тегу…" />
+      <FilterPanel sort={{ value: sort, options: [{ value: 'new', label: 'Сначала новые' }, { value: 'old', label: 'Сначала старые' }], onChange: v => { setSort(v as 'new' | 'old'); setPaging(p => ({ ...p, page: 1 })); } }}><FilterGroup label="Тип контента" options={filters} value={kind} onChange={v => { setKind(v); setPaging(p => ({ ...p, page: 1 })); }} /></FilterPanel>
+      {posts.isLoading && <p role="status">Загружаем публикации…</p>}
+      {(posts.error || error) && <p role="alert">{error || apiError(posts.error).message}<Button variant="outline" onClick={() => { setError(''); void posts.refetch(); }}>Повторить</Button></p>}
+      <div className="post-feed">{items.map(post => <article className="post-card" key={post.id}>
+        <div className="post-heading"><span className="post-category">{post.type === 'note' ? 'Заметка' : post.type === 'photo' ? 'Фото' : 'Ссылка'}</span>{session && me.data?.user_id === post.author_id && <div className="post-actions"><Button variant="icon" aria-label={`Редактировать ${post.title}`} onClick={() => setEditing(post)}><Pencil size={18} /></Button><Button variant="icon" aria-label={`Удалить ${post.title}`} disabled={!!deleting} onClick={() => void remove(post)}><Trash2 size={18} /></Button></div>}</div>
+        <h2>{post.title}</h2>
+        {post.type === 'note' && <div className="markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml disallowedElements={['img']} urlTransform={url => /^https?:\/\//i.test(url) ? url : ''} components={{ a: props => <a {...props} target="_blank" rel="noopener noreferrer" /> }}>{post.markdown}</ReactMarkdown></div>}
+        {post.type === 'link' && <a href={/^https?:\/\//i.test(post.url) ? post.url : undefined} target="_blank" rel="noopener noreferrer" className="post-link">{post.url}</a>}
+        {post.type === 'photo' && <PhotoGallery photos={post.photos} />}
+        <footer><TagList tags={post.tags.map(t => t.title)} onTagClick={v => { setQuery(v); setPaging(p => ({ ...p, page: 1 })); }} /><span className="post-meta">{new Date(post.created_at).toLocaleDateString('ru-RU')} · {post.author} · {post.visibility === 'public' ? 'Публично' : 'Только я'}</span></footer>
+      </article>)}</div>
+      {!posts.isLoading && !posts.error && items.length === 0 && <EmptyState>Публикаций пока нет. Создайте пост или измените фильтры.</EmptyState>}
+      <Pagination total={total} page={paging.page} pageSize={paging.size} pageSizes={[2, 10, 20, 50]} onPageChange={page => setPaging(p => ({ ...p, page }))} onPageSizeChange={size => setPaging({ page: 1, size })} />
+    </>}
+    {editing && session && <PostForm post={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setPaging(p => ({ ...p, page: 1 })); void refresh(); if (!member || section !== 'all') void navigate({ to: '/feed', search: { section: 'all' } }); }} />}
   </AppShell>;
 }
