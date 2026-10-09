@@ -2,7 +2,7 @@
 
 Saveboard — проект приложения для сохранения ссылок и заметок, архивирования веб-страниц и поиска по личной коллекции. Основной стек: Go, React/TypeScript и PostgreSQL; локальное окружение запускается через Docker Compose.
 
-Базовый каркас монорепозитория по сохранённому ресерчу: Go API/worker, React SPA, OpenAPI-клиент, миграции и локальное окружение Docker Compose. Это **foundation**, ещё не готовый продукт: вход, CRUD заметок, архивирование и поиск — следующие этапы. Фактический объём и результаты проверок: [development.md](docs/development.md).
+Базовый каркас монорепозитория по сохранённому ресерчу: Go API/worker, React SPA, OpenAPI-клиент, миграции и локальное окружение Docker Compose. Это **foundation**, ещё не готовый продукт. Backend API входа по username/email, JWT с ротацией refresh, OAuth/OIDC и управления сессиями реализован; интерфейс входа, CRUD заметок, архивирование и поиск — следующие этапы. Настройка авторизации: [identity README](backend/internal/identity/README.md). Фактический объём и результаты проверок: [development.md](docs/development.md).
 
 ## Быстрый запуск
 
@@ -14,7 +14,7 @@ pnpm run bootstrap
 pnpm infra:up
 ```
 
-`init-env` создаёт `.env` со случайными паролями, не перезаписывая существующий файл. Секреты исключены из Git.
+`init-env` создаёт `.env` со случайными паролями; для существующего файла добавляет недостающие auth-ключи, сохраняя текущие значения. Секреты исключены из Git.
 
 - Приложение: <http://localhost:8080>.
 - API: <http://localhost:8080/api/docs> и <http://localhost:8080/api/openapi.json>.

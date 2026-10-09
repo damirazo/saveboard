@@ -14,7 +14,7 @@ pnpm api:generate
 
 `pnpm check` проверяет Go и capture. Интеграционный тест использует Docker/Testcontainers и отдельную временную БД. `pnpm api:generate` экспортирует `api/openapi.json`, не обращаясь к frontend.
 
-Для запуска задать `DATABASE_URL`, затем `pnpm migrate`, `pnpm dev`, в другом терминале `pnpm dev:worker`. Capture отдельно: `pnpm dev:capture` с `CAPTURE_TOKEN` длиной от 32 символов. Остальные требования и ограничения приложения описаны в общем плане проекта; продуктовая авторизация/capture пока не включены.
+Для запуска задать `DATABASE_URL`, `AUTH_JWT_KEY` и `AUTH_ENCRYPTION_KEY` (разные случайные ключи по 32 байта, hex), затем `pnpm migrate`, `pnpm dev`, в другом терминале `pnpm dev:worker`. Capture отдельно: `pnpm dev:capture` с `CAPTURE_TOKEN` длиной от 32 символов. API входа по username/email, JWT/refresh, OAuth/OIDC и выхода описан в [identity/README.md](internal/identity/README.md). Capture пока не включён.
 
 Docker build-контекст — этот каталог:
 

@@ -35,11 +35,35 @@ func TestReadinessAndRouteBoundaries(t *testing.T) {
 		})
 	}
 	h, _ := New(Dependencies{})
-	for _, path := range []string{"/api/v1/notes", "/auth/login", "/api/unknown"} {
+	for _, path := range []string{"/api/v1/notes", "/api/unknown"} {
 		r := httptest.NewRecorder()
 		h.ServeHTTP(r, httptest.NewRequest(http.MethodGet, path, nil))
 		if r.Code != 404 {
 			t.Fatalf("unimplemented %s must not be exposed: %d", path, r.Code)
+		}
+	}
+}
+
+func TestAuthRoutesWithoutServices(t *testing.T) {
+	h, api := New(Dependencies{})
+	for _, request := range []struct{ method, path, body string }{
+		{"POST", "/api/v1/auth/login", `{"login":"user","password":"password"}`},
+		{"POST", "/api/v1/auth/refresh", `{"refresh_token":"` + strings.Repeat("a", 43) + `"}`},
+		{"POST", "/api/v1/auth/logout", ""},
+		{"POST", "/api/v1/auth/logout-others", ""},
+		{"GET", "/api/v1/auth/me", ""},
+		{"GET", "/auth/login", ""},
+		{"GET", "/auth/callback", ""},
+	} {
+		req := httptest.NewRequest(request.method, request.path, strings.NewReader(request.body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != 503 {
+			t.Fatalf("%s returned %d: %s", request.path, w.Code, w.Body.String())
+		}
+		if _, ok := api.OpenAPI().Paths[request.path]; !ok {
+			t.Fatalf("missing OpenAPI path %s", request.path)
 		}
 	}
 }

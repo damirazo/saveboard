@@ -51,7 +51,7 @@ func TestTransactionalEnqueueAndWorker(t *testing.T) {
 	}
 	service := &Service{DB: database, Queue: producer}
 	owner := uuid.New()
-	if _, err := database.DB.ExecContext(ctx, `INSERT INTO users(id, display_name) VALUES ($1, 'Test')`, owner); err != nil {
+	if _, err := database.DB.ExecContext(ctx, `INSERT INTO users(id, username, display_name) VALUES ($1, 'test_user', 'Test')`, owner); err != nil {
 		t.Fatal(err)
 	}
 	rollback := errors.New("deliberate rollback")

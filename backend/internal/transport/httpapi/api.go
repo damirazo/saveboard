@@ -8,10 +8,15 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
+	"saveboard/internal/identity"
 	"time"
 )
 
-type Dependencies struct{ Ping func(context.Context) error }
+type Dependencies struct {
+	Ping          func(context.Context) error
+	Auth          *identity.AuthService
+	SecureCookies bool
+}
 type HealthOutput struct {
 	Body struct {
 		Status string `json:"status"`
@@ -35,6 +40,7 @@ func New(deps Dependencies) (http.Handler, huma.API) {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Referrer-Policy", "no-referrer")
 			req.Body = http.MaxBytesReader(w, req.Body, 1<<20)
 			next.ServeHTTP(w, req)
 		})
@@ -44,6 +50,7 @@ func New(deps Dependencies) (http.Handler, huma.API) {
 	c.DocsPath = "/api/docs"
 	c.SchemasPath = "/api/schemas"
 	a := humachi.New(r, c)
+	registerAuth(a, deps)
 	huma.Get(a, "/api/health/live", func(ctx context.Context, _ *struct{}) (*HealthOutput, error) {
 		out := &HealthOutput{}
 		out.Body.Status = "ok"
@@ -63,6 +70,7 @@ func New(deps Dependencies) (http.Handler, huma.API) {
 		out := &InfoOutput{}
 		out.Body.Name = "Saveboard"
 		out.Body.Stage = "foundation"
+		out.Body.Authentication = deps.Auth != nil
 		return out, nil
 	})
 	return otelhttp.NewHandler(r, "http"), a

@@ -18,7 +18,7 @@ const system = await get('/api/v1/system');
 assert.equal(system.status, 200);
 const info = await system.json();
 assert.equal(info.stage, 'foundation');
-assert.equal(info.authentication, false);
+assert.equal(info.authentication, true);
 assert.equal(info.capture, false);
 assert.equal(info.semanticSearch, false);
 

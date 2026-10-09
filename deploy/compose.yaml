@@ -42,6 +42,15 @@ services:
   api:
     <<: *backend
     command: [/app/api]
+    environment:
+      <<: *backend-env
+      AUTH_JWT_KEY: ${AUTH_JWT_KEY:?Run node scripts/init-env.mjs}
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?Run node scripts/init-env.mjs}
+      AUTH_PUBLIC_URL: http://localhost:${HTTP_PORT:-8080}
+      OIDC_ISSUER: http://localhost:${HTTP_PORT:-8080}/identity/realms/saveboard
+      OIDC_CLIENT_ID: saveboard-bff
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Run node scripts/init-env.mjs}
+      OIDC_BACKCHANNEL_URL: http://keycloak:8080
     networks: [edge, data]
     read_only: true
     depends_on:

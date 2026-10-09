@@ -14,7 +14,7 @@
     "typecheck": "pnpm --filter @saveboard/capture typecheck",
     "lint": "go vet ./... && eslint capture/src",
     "test": "go test ./... && node --test scripts/*.test.mjs && pnpm --filter @saveboard/capture test",
-    "test:integration": "go test -tags=integration -count=1 ./internal/notes",
+    "test:integration": "go test -tags=integration -count=1 -p 1 ./internal/notes ./internal/posts ./internal/identity ./internal/transport/httpapi",
     "api:generate": "go run ./cmd/openapi",
     "migrate": "go run ./cmd/migrate",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"saveboard/internal/identity"
 	"saveboard/internal/platform/config"
 	"saveboard/internal/platform/db"
 	"saveboard/internal/platform/httpserver"
@@ -34,6 +35,14 @@ func run() error {
 		return err
 	}
 	defer database.Close()
-	handler, _ := httpapi.New(httpapi.Dependencies{Ping: database.PingContext})
+	authConfig := identity.AuthConfig{SigningKey: cfg.AuthSigningKey, EncryptionKey: cfg.AuthEncryptionKey, Issuer: cfg.PublicURL, Audience: "saveboard-api", OIDCIssuer: cfg.OIDCIssuer}
+	if cfg.OIDCIssuer != "" {
+		authConfig.ResolveProvider = identity.ProviderResolver(cfg.OIDCIssuer, cfg.OIDCClientID, cfg.OIDCClientSecret, cfg.PublicURL+"/auth/callback", cfg.OIDCBackchannelURL)
+	}
+	auth, err := identity.NewAuthService(database.DB, authConfig)
+	if err != nil {
+		return err
+	}
+	handler, _ := httpapi.New(httpapi.Dependencies{Ping: database.PingContext, Auth: auth, SecureCookies: cfg.SecureCookies})
 	return httpserver.Run(ctx, cfg.HTTPAddr, handler)
 }
