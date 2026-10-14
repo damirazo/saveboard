@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/signal"
 	"saveboard/internal/identity"
+	"saveboard/internal/notifications"
+	"saveboard/internal/platform/blobstore"
 	"saveboard/internal/platform/config"
 	"saveboard/internal/platform/db"
 	"saveboard/internal/platform/httpserver"
@@ -44,6 +46,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, _ := httpapi.New(httpapi.Dependencies{Ping: database.PingContext, Auth: auth, Posts: posts.NewService(database.DB), SecureCookies: cfg.SecureCookies})
+	postService := posts.NewService(database.DB)
+	if root := os.Getenv("BLOB_ROOT"); root != "" {
+		postService.Blobs = blobstore.ReadOnly(root)
+	}
+	handler, _ := httpapi.New(httpapi.Dependencies{Ping: database.PingContext, Auth: auth, Posts: postService, Notifications: &notifications.Service{DB: database.DB}, SecureCookies: cfg.SecureCookies})
 	return httpserver.Run(ctx, cfg.HTTPAddr, handler)
 }

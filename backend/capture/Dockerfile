@@ -8,11 +8,11 @@ COPY tsconfig.base.json ./
 COPY capture capture
 RUN pnpm --filter @saveboard/capture build
 
-# Exact match for the installed playwright package. Browsers are installed but
-# execution is deliberately disabled until the isolated egress prototype passes.
+# Exact match for the installed Playwright package. Browser has no direct egress.
 FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
 COPY --from=build /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
+RUN mkdir /cache && chown pwuser:pwuser /cache
 COPY --from=build --chown=pwuser:pwuser /src/node_modules /app/node_modules
 COPY --from=build --chown=pwuser:pwuser /src/capture /app/capture
 USER pwuser

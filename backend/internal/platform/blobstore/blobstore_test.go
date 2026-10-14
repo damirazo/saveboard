@@ -3,6 +3,8 @@ package blobstore
 import (
 	"context"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -42,6 +44,23 @@ func TestImmutableBlobsAndLimits(t *testing.T) {
 	}
 	if _, err := store.Get(ctx, "../secret"); err == nil {
 		t.Fatal("path traversal accepted")
+	}
+	alias := strings.Repeat("a", 64) + "/" + a.Key + ".css"
+	if err := store.PublishAlias(ctx, a.Key, alias); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PublishAlias(ctx, a.Key, alias); err != nil {
+		t.Fatal(err)
+	}
+	source, _ := os.Stat(filepath.Join(store.root, a.Key[:2], a.Key))
+	target, _ := os.Stat(filepath.Join(store.root, "sites", filepath.FromSlash(alias)))
+	if source == nil || target == nil || !os.SameFile(source, target) {
+		t.Fatal("hierarchy must reuse the CAS inode")
+	}
+	for _, path := range []string{"../secret", strings.Repeat("a", 64) + "/../../secret", `C:\secret`} {
+		if store.PublishAlias(ctx, a.Key, path) == nil {
+			t.Fatal("unsafe alias accepted")
+		}
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()

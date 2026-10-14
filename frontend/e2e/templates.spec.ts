@@ -37,7 +37,7 @@ test('guest and member use shared navigation without exposing private sample pos
   await page.screenshot({ path: 'test-results/member-desktop.png', fullPage: true });
 });
 
-test('invalid credentials stay on login; registration remains a placeholder', async ({ page }) => {
+test('invalid credentials stay on login; registration validates and starts a session', async ({ page }) => {
   const writes: string[] = [];
   page.on('request', request => { if (request.method() === 'POST') writes.push(request.url()); });
   await page.goto('/login');
@@ -55,14 +55,46 @@ test('invalid credentials stay on login; registration remains a placeholder', as
   await page.getByLabel('Username', { exact: true }).fill('bad@name');
   await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
   await page.getByLabel('Пароль', { exact: true }).fill('test-password');
+  await page.getByLabel('Повторите пароль', { exact: true }).fill('different-password');
   await page.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
   expect(await page.getByLabel('Username', { exact: true }).evaluate((el: HTMLInputElement) => el.checkValidity())).toBe(false);
   await page.getByLabel('Username', { exact: true }).fill('alex');
   await page.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Аккаунт не создан');
+  await expect(page.getByRole('alert')).toContainText('Пароли не совпадают');
   await expect(page.getByRole('button', { name: /Продолжить через OAuth/ })).toBeDisabled();
   expect(writes).toHaveLength(1);
   await page.screenshot({ path: 'test-results/register-desktop.png', fullPage: true });
+  await page.getByLabel('Повторите пароль', { exact: true }).fill('test-password');
+  await page.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
+  await expect(page).toHaveURL(/\/feed/);
+  expect(writes).toHaveLength(2);
+  await expect(page.locator('.sidebar-profile')).toContainText('alex');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Все публикации' })).toBeVisible();
+  await page.goto('/register');
+  await expect(page).toHaveURL(/\/feed/);
+});
+
+test('registration conflict can be corrected without losing entered data', async ({ page }) => {
+  let attempts = 0;
+  await page.route('**/api/v1/auth/register', async route => {
+    attempts++;
+    if (attempts === 1) { await route.fulfill({ status: 409, json: {} }); return; }
+    await route.fulfill({ status: 201, json: { access_token: 'registered', refresh_token: 'refresh', expires_in: 3600, refresh_expires_at: new Date(Date.now() + 86400000).toISOString(), session_id: 'session', token_type: 'Bearer' } });
+  });
+  await page.goto('/register');
+  await page.getByLabel('Username', { exact: true }).fill('existing');
+  await page.getByLabel('Email', { exact: true }).fill('new@example.com');
+  await page.getByLabel('Пароль', { exact: true }).fill('test-password');
+  await page.getByLabel('Повторите пароль', { exact: true }).fill('test-password');
+  await page.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('уже зарегистрирован');
+  expect(await page.evaluate(() => sessionStorage.getItem('saveboard.session'))).toBeNull();
+  await expect(page.getByLabel('Email', { exact: true })).toHaveValue('new@example.com');
+  await page.getByLabel('Username', { exact: true }).fill('available');
+  await page.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
+  await expect(page).toHaveURL(/\/feed/);
+  expect(attempts).toBe(2);
 });
 
 test('all templates fit mobile screens and expose navigation on demand', async ({ page }) => {

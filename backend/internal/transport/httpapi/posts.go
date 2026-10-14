@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"saveboard/internal/jobs"
 	"saveboard/internal/posts"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -24,6 +25,7 @@ type PostIDInput struct {
 	ID            string `path:"id" format:"uuid"`
 }
 type PostOutput struct{ Body posts.View }
+type CopyOutput struct{ Body jobs.CaptureResult }
 type PostsInput struct {
 	Authorization string `header:"Authorization"`
 	Scope         string `query:"scope" enum:"public,mine" default:"public"`
@@ -140,11 +142,38 @@ func registerPosts(api huma.API, deps Dependencies) {
 	huma.Register(api, op("tags-suggest", http.MethodGet, "/api/v1/post-tags", true), func(ctx context.Context, in *struct {
 		Authorization string `header:"Authorization"`
 		Query         string `query:"q" maxLength:"80"`
-	}) (*TagsOutput, error) { if _, e := viewer(ctx, in.Authorization, true); e != nil {
-		return nil, e
-	}; tags, e := deps.Posts.Tags(ctx, in.Query); if e != nil {
-		return nil, postError(e)
-	}; return &TagsOutput{tags}, nil })
+	}) (*TagsOutput, error) {
+		if _, e := viewer(ctx, in.Authorization, true); e != nil {
+			return nil, e
+		}
+		tags, e := deps.Posts.Tags(ctx, in.Query)
+		if e != nil {
+			return nil, postError(e)
+		}
+		return &TagsOutput{tags}, nil
+	})
+	huma.Register(api, op("posts-copy", http.MethodGet, "/api/v1/posts/{id}/copy", false), func(ctx context.Context, in *PostIDInput) (*CopyOutput, error) {
+		who, e := viewer(ctx, in.Authorization, false)
+		if e != nil {
+			return nil, e
+		}
+		v, e := deps.Posts.Copy(ctx, who, in.ID)
+		if e != nil {
+			return nil, postError(e)
+		}
+		return &CopyOutput{v}, nil
+	})
+	huma.Register(api, op("posts-thumbnail", http.MethodGet, "/api/v1/posts/{id}/thumbnail", false), func(ctx context.Context, in *PostIDInput) (*PhotoOutput, error) {
+		who, e := viewer(ctx, in.Authorization, false)
+		if e != nil {
+			return nil, e
+		}
+		v, e := deps.Posts.Thumbnail(ctx, who, in.ID)
+		if e != nil {
+			return nil, postError(e)
+		}
+		return &PhotoOutput{"image/png", v}, nil
+	})
 	uploadOp := op("photos-upload", http.MethodPost, "/api/v1/photos", true)
 	uploadOp.MaxBodyBytes = 14 << 20
 	// Authenticate before Huma reads/decodes the large JSON body.

@@ -46,3 +46,21 @@ it('restores a revoked session as a guest and does not send tokens to another or
   await restored.restore();
   expect(restored.getSnapshot()).toBeNull();
 });
+it('registers and stores a session without retaining credentials', async () => {
+  const transport = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(tokens(), { status: 201 }));
+  const client = createSessionClient(sessionStorage, transport);
+  await client.register(' alice ', ' alice@example.com ', 'secret-password');
+  expect(transport.mock.calls[0]![0]).toBe('/api/v1/auth/register');
+  expect(JSON.parse(String(transport.mock.calls[0]![1]?.body))).toEqual({ username: 'alice', email: 'alice@example.com', password: 'secret-password' });
+  expect(client.getSnapshot()?.login).toBe('alice');
+  expect(sessionStorage.getItem('saveboard.session')).not.toContain('secret-password');
+});
+
+it('reports duplicate registration and network errors without creating a session', async () => {
+  const transport = vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(null, { status: 409 })).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+  const client = createSessionClient(sessionStorage, transport);
+  await expect(client.register('alice', 'alice@example.com', 'secret-password')).rejects.toThrow('уже зарегистрирован');
+  await expect(client.login('alice', 'secret-password')).rejects.toThrow('связаться с сервером');
+  expect(client.getSnapshot()).toBeNull();
+  expect(sessionStorage.getItem('saveboard.session')).toBeNull();
+});

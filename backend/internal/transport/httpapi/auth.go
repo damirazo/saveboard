@@ -17,6 +17,14 @@ type LoginInput struct {
 		Password string `json:"password" minLength:"1" maxLength:"72" format:"password"`
 	}
 }
+
+type RegistrationInput struct {
+	Body struct {
+		Username string `json:"username" minLength:"3" maxLength:"64"`
+		Email    string `json:"email" minLength:"3" maxLength:"254"`
+		Password string `json:"password" minLength:"8" maxLength:"72" format:"password"`
+	}
+}
 type RefreshInput struct {
 	Body struct {
 		RefreshToken string `json:"refresh_token" minLength:"43" maxLength:"43"`
@@ -43,6 +51,10 @@ func bearer(value string) string {
 
 func authError(err error) error {
 	switch {
+	case errors.Is(err, identity.ErrRegistrationInvalid):
+		return huma.Error422UnprocessableEntity(err.Error())
+	case errors.Is(err, identity.ErrAccountExists):
+		return huma.Error409Conflict("Username or email is already registered")
 	case errors.Is(err, identity.ErrUnauthorized):
 		return huma.Error401Unauthorized("Invalid credentials or session")
 	case errors.Is(err, identity.ErrBusy):
@@ -67,12 +79,24 @@ func registerAuth(api huma.API, deps Dependencies) {
 		return nil
 	}
 	op := func(id, method, path string, protected bool) huma.Operation {
-		o := huma.Operation{OperationID: id, Method: method, Path: path, Tags: []string{"Authentication"}, Errors: []int{401, 422, 429, 503}}
+		o := huma.Operation{OperationID: id, Method: method, Path: path, Tags: []string{"Authentication"}, Errors: []int{401, 409, 422, 429, 503}}
 		if protected {
 			o.Security = []map[string][]string{{"bearerAuth": {}}}
 		}
 		return o
 	}
+	registrationOp := op("auth-register", http.MethodPost, "/api/v1/auth/register", false)
+	registrationOp.DefaultStatus = http.StatusCreated
+	huma.Register(api, registrationOp, func(ctx context.Context, in *RegistrationInput) (*TokenOutput, error) {
+		if err := available(); err != nil {
+			return nil, err
+		}
+		tokens, err := deps.Auth.Register(ctx, in.Body.Username, in.Body.Email, in.Body.Password)
+		if err != nil {
+			return nil, authError(err)
+		}
+		return &TokenOutput{Body: tokens}, nil
+	})
 	huma.Register(api, op("auth-login", http.MethodPost, "/api/v1/auth/login", false), func(ctx context.Context, in *LoginInput) (*TokenOutput, error) {
 		if err := available(); err != nil {
 			return nil, err

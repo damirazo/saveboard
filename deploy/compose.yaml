@@ -51,6 +51,8 @@ services:
       OIDC_CLIENT_ID: saveboard-bff
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Run node scripts/init-env.mjs}
       OIDC_BACKCHANNEL_URL: http://keycloak:8080
+      BLOB_ROOT: /data/blobs
+    volumes: [blobs:/data:ro]
     networks: [edge, data]
     read_only: true
     depends_on:
@@ -87,13 +89,14 @@ services:
       dockerfile: capture/Dockerfile
     environment:
       CAPTURE_TOKEN: ${CAPTURE_TOKEN:?Run node scripts/init-env.mjs}
+      CAPTURE_EGRESS_URL: http://capture-egress:3002
     networks: [capture-control]
     init: true
     read_only: true
     tmpfs: [/tmp:size=256m]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    pids_limit: 128
+    pids_limit: 256
     mem_limit: 1g
     cpus: 1.0
     healthcheck:
@@ -101,6 +104,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+    restart: unless-stopped
+
+  capture-egress:
+    image: saveboard/capture:dev
+    command: [node, capture/dist/egress-main.js]
+    environment:
+      CAPTURE_TOKEN: ${CAPTURE_TOKEN:?Run node scripts/init-env.mjs}
+      CAPTURE_CACHE_ROOT: /cache
+    volumes: [capture-cache:/cache]
+    networks: [capture-control, capture-egress]
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 256m
     restart: unless-stopped
 
   keycloak:
@@ -188,6 +207,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  capture-cache:
   postgres:
   blobs:
   qdrant:
@@ -197,4 +217,5 @@ networks:
   edge:
   data: { internal: true }
   capture-control: { internal: true }
+  capture-egress:
   model-download:

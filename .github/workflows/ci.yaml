@@ -22,7 +22,8 @@ jobs:
       - run: node scripts/init-env.mjs
       - run: docker compose --env-file .env -f deploy/compose.yaml config --quiet
       - run: docker compose --env-file .env -f deploy/compose.yaml build
-      - run: docker compose --env-file .env -f deploy/compose.yaml up -d --no-build --wait --wait-timeout 180 postgres migrate api worker keycloak qdrant mailpit nginx
+      - run: docker compose --env-file .env -f deploy/compose.yaml up -d --no-build --wait --wait-timeout 180 postgres migrate api worker capture capture-egress keycloak qdrant mailpit nginx
+      - run: docker compose --env-file .env -f deploy/compose.yaml exec -T capture node capture/dist/browser-smoke.js
       - run: node scripts/smoke-compose.mjs
       - if: always()
         run: docker compose --env-file .env -f deploy/compose.yaml down

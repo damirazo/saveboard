@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@saveboard/api-client';
+import { apiClient, type components } from '@saveboard/api-client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
@@ -16,6 +16,7 @@ import { TagList } from '../../components/content/post-card';
 import { Button } from '../../components/ui/button';
 import { useSession } from '../auth/use-session';
 import { PhotoGallery } from './photo-gallery';
+import { LinkPost } from './link-post';
 import { PostForm } from './post-form';
 import { apiError, type SavedPost } from './post-api';
 
@@ -28,7 +29,8 @@ export function LibraryPage({ member = false, section = 'all' }: { member?: bool
   const [editing, setEditing] = useState<SavedPost | 'new' | null>(null);
   const [deleting, setDeleting] = useState(''); const [error, setError] = useState('');
   const enabled = section === 'all' && (!member || !!session);
-  const posts = useQuery({ queryKey: ['posts', session?.tokens.session_id, member, kind, query, sort, paging, section], enabled,
+  const posts = useQuery<components['schemas']['Page']>({ queryKey: ['posts', session?.tokens.session_id, member, kind, query, sort, paging, section], enabled,
+    refetchInterval: query => query.state.data?.items?.some(p => p.capture_state === 'pending') ? 3000 : false,
     queryFn: async ({ signal }) => {
       const result = await apiClient.GET('/api/v1/posts', { params: { query: { scope: member ? 'mine' : 'public', type: kind ? kind as 'note' | 'link' | 'photo' : undefined, q: query, sort, page: paging.page, size: paging.size } }, signal });
       if (result.error || !result.data) throw apiError(result.error); return result.data;
@@ -59,7 +61,7 @@ export function LibraryPage({ member = false, section = 'all' }: { member?: bool
         <div className="post-heading"><span className="post-category">{post.type === 'note' ? 'Заметка' : post.type === 'photo' ? 'Фото' : 'Ссылка'}</span>{session && me.data?.user_id === post.author_id && <div className="post-actions"><Button variant="icon" aria-label={`Редактировать ${post.title}`} onClick={() => setEditing(post)}><Pencil size={18} /></Button><Button variant="icon" aria-label={`Удалить ${post.title}`} disabled={!!deleting} onClick={() => void remove(post)}><Trash2 size={18} /></Button></div>}</div>
         <h2>{post.title}</h2>
         {post.type === 'note' && <div className="markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml disallowedElements={['img']} urlTransform={url => /^https?:\/\//i.test(url) ? url : ''} components={{ a: props => <a {...props} target="_blank" rel="noopener noreferrer" /> }}>{post.markdown}</ReactMarkdown></div>}
-        {post.type === 'link' && <a href={/^https?:\/\//i.test(post.url) ? post.url : undefined} target="_blank" rel="noopener noreferrer" className="post-link">{post.url}</a>}
+        {post.type === 'link' && <LinkPost post={post} />}
         {post.type === 'photo' && <PhotoGallery photos={post.photos} />}
         <footer><TagList tags={post.tags.map(t => t.title)} onTagClick={v => { setQuery(v); setPaging(p => ({ ...p, page: 1 })); }} /><span className="post-meta">{new Date(post.created_at).toLocaleDateString('ru-RU')} · {post.author} · {post.visibility === 'public' ? 'Публично' : 'Только я'}</span></footer>
       </article>)}</div>

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { demoPosts } from '../src/features/library/demo-posts';
 export async function mockPosts(page: Page) {
+  await page.route('**/api/v1/notifications/unread', route => route.fulfill({ json: { count: 0 } }));
   await page.route('**/api/v1/posts?*', async route => {
     const url = new URL(route.request().url()); const q = url.searchParams.get('q')?.toLowerCase() || '';
     const kind = url.searchParams.get('type'); const scope = url.searchParams.get('scope');

@@ -19,7 +19,7 @@ assert.equal(system.status, 200);
 const info = await system.json();
 assert.equal(info.stage, 'foundation');
 assert.equal(info.authentication, true);
-assert.equal(info.capture, false);
+assert.equal(info.capture, true);
 assert.equal(info.semanticSearch, false);
 
 const contract = await get('/api/openapi.json');

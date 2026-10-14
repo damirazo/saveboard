@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"saveboard/internal/platform/blobstore"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 type Service struct {
 	DB         *sql.DB
+	Blobs      blobstore.Store
 	photoSlots chan struct{}
 }
 
@@ -23,31 +25,42 @@ type TagInput struct {
 	Title string `json:"title" maxLength:"80"`
 }
 type Write struct {
-	Title      string     `json:"title" minLength:"1" maxLength:"200"`
-	Type       string     `json:"type" enum:"note,link,photo"`
-	Visibility string     `json:"visibility" enum:"private,public"`
-	Markdown   string     `json:"markdown" maxLength:"100000"`
-	URL        string     `json:"url" maxLength:"4096"`
-	Tags       []TagInput `json:"tags" minItems:"1" maxItems:"20"`
-	PhotoIDs   []string   `json:"photo_ids" maxItems:"32"`
+	IndexRAG        bool       `json:"index_rag,omitempty" default:"false"`
+	SaveCopy        bool       `json:"save_copy,omitempty" default:"false"`
+	CreateThumbnail bool       `json:"create_thumbnail,omitempty" default:"false"`
+	Title           string     `json:"title" minLength:"1" maxLength:"200"`
+	Type            string     `json:"type" enum:"note,link,photo"`
+	Visibility      string     `json:"visibility" enum:"private,public"`
+	Markdown        string     `json:"markdown" maxLength:"100000"`
+	URL             string     `json:"url" maxLength:"4096"`
+	Tags            []TagInput `json:"tags" minItems:"1" maxItems:"20"`
+	PhotoIDs        []string   `json:"photo_ids" maxItems:"32"`
 }
 type PhotoView struct {
 	ID  string `json:"id"`
 	URL string `json:"url"`
 }
 type View struct {
-	ID         string      `json:"id"`
-	AuthorID   string      `json:"author_id"`
-	Author     string      `json:"author"`
-	Title      string      `json:"title"`
-	Type       string      `json:"type"`
-	Visibility string      `json:"visibility"`
-	Status     string      `json:"status"`
-	Markdown   string      `json:"markdown"`
-	URL        string      `json:"url"`
-	CreatedAt  time.Time   `json:"created_at"`
-	Tags       []Tag       `json:"tags"`
-	Photos     []PhotoView `json:"photos"`
+	IndexRAG        bool        `json:"index_rag"`
+	RAGState        string      `json:"rag_state"`
+	SaveCopy        bool        `json:"save_copy"`
+	CreateThumbnail bool        `json:"create_thumbnail"`
+	CaptureState    string      `json:"capture_state"`
+	CaptureWarning  string      `json:"capture_warning"`
+	CopyURL         string      `json:"copy_url"`
+	ThumbnailURL    string      `json:"thumbnail_url"`
+	ID              string      `json:"id"`
+	AuthorID        string      `json:"author_id"`
+	Author          string      `json:"author"`
+	Title           string      `json:"title"`
+	Type            string      `json:"type"`
+	Visibility      string      `json:"visibility"`
+	Status          string      `json:"status"`
+	Markdown        string      `json:"markdown"`
+	URL             string      `json:"url"`
+	CreatedAt       time.Time   `json:"created_at"`
+	Tags            []Tag       `json:"tags"`
+	Photos          []PhotoView `json:"photos"`
 }
 type Page struct {
 	Items []View `json:"items"`
@@ -65,6 +78,9 @@ func active(ctx context.Context, tx *sql.Tx, owner string) error {
 	return nil
 }
 func validate(w *Write) error {
+	if w.Type != "link" && (w.SaveCopy || w.CreateThumbnail || w.IndexRAG) {
+		return invalid("Копия и эскиз доступны только для ссылки")
+	}
 	w.Title = strings.TrimSpace(w.Title)
 	if !validLabel(w.Title, 200) || len(w.Tags) < 1 || len(w.Tags) > 20 {
 		return invalid("Укажите название и от 1 до 20 тегов")
@@ -220,6 +236,12 @@ func (s *Service) Save(ctx context.Context, owner, id string, w Write) (View, er
 			return View{}, err
 		}
 	}
+	if err = s.saveCapture(ctx, tx, id, w); err != nil {
+		return View{}, err
+	}
+	if err = s.saveRAG(ctx, tx, id, owner, w); err != nil {
+		return View{}, err
+	}
 	if err = tx.Commit(); err != nil {
 		return View{}, err
 	}
@@ -246,6 +268,9 @@ func (s *Service) Draft(ctx context.Context, owner, id string) error {
 		return ErrForbidden
 	}
 	if _, err = tx.ExecContext(ctx, "UPDATE posts SET status='draft' WHERE id=$1", id); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, "DELETE FROM post_rag WHERE post_id=$1", id); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -288,7 +313,15 @@ func (s *Service) Get(ctx context.Context, viewer, id string) (View, error) {
 		}
 		v.Photos = append(v.Photos, p)
 	}
-	return v, rows.Err()
+	if err = rows.Err(); err != nil {
+		return v, err
+	}
+	rows.Close()
+	err = s.captureView(ctx, &v)
+	if err == nil {
+		err = s.ragView(ctx, &v)
+	}
+	return v, err
 }
 func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string, page, size int) (Page, error) {
 	out := Page{Items: []View{}}

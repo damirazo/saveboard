@@ -60,6 +60,21 @@ export function createSessionClient(storage: Storage, transport: typeof fetch) {
     }
     return response;
   };
+  async function startSession(path: '/api/v1/auth/login' | '/api/v1/auth/register', body: Record<string, string>, login: string) {
+    const version = ++revision;
+    let response: Response;
+    try { response = await transport(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+    catch { throw new Error('Не удалось связаться с сервером. Проверьте соединение и попробуйте снова.'); }
+    if (!response.ok) {
+      if (response.status === 409) throw new Error('Этот username или email уже зарегистрирован. Войдите или укажите другие данные.');
+      if (response.status === 401) throw new Error('Не удалось войти: неверный username/email или пароль, либо аккаунт недоступен.');
+      if (response.status === 422) throw new Error('Проверьте username, email и пароль. Пароль: минимум 8 символов, максимум 72 байта.');
+      if (response.status === 429) throw new Error('Слишком много попыток. Подождите немного и повторите.');
+      throw new Error('Сервис авторизации временно недоступен. Попробуйте позже.');
+    }
+    const tokens = await response.json() as Tokens;
+    if (revision === version) { restored = true; save({ tokens, login, expiresAt: Date.now() + tokens.expires_in * 1000 }); }
+  }
   return {
     fetch: authenticatedFetch,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
@@ -78,11 +93,10 @@ export function createSessionClient(storage: Storage, transport: typeof fetch) {
       return restorePromise;
     },
     async login(login: string, password: string) {
-      const version = ++revision;
-      const response = await transport('/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) });
-      if (!response.ok) throw new Error('Login failed');
-      const tokens = await response.json() as Tokens;
-      if (revision === version) { restored = true; save({ tokens, login, expiresAt: Date.now() + tokens.expires_in * 1000 }); }
+      return startSession('/api/v1/auth/login', { login: login.trim(), password }, login.trim());
+    },
+    async register(username: string, email: string, password: string) {
+      return startSession('/api/v1/auth/register', { username: username.trim(), email: email.trim(), password }, username.trim());
     },
     async logout() {
       try {

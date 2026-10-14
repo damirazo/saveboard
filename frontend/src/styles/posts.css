@@ -42,3 +42,16 @@
 @media(max-width:1000px){.photo-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
 @media(max-width:700px){.photo-grid{grid-template-columns:repeat(3,minmax(0,1fr));}.post-dialog{padding:16px;}.post-dialog footer{flex-wrap:wrap;}}
 @media(max-width:420px){.photo-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.link-options, .link-post { display: grid; gap: 1rem; }
+.post-dialog .capture-option { display: flex; flex-direction: row; align-items: center; gap: .75rem; cursor: pointer; }
+.post-dialog .capture-option input { width: 1.15rem; height: 1.15rem; flex: none; accent-color: var(--sb-primary); }
+.link-options small { color: var(--sb-muted); }
+.link-post > .button { justify-self: start; }
+.link-thumbnail { width: min(100%, 800px); height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; }
+.archive-dialog { position: fixed; inset: 3dvh 2vw; margin: 0; width: 96vw; max-width: none; height: 94dvh; max-height: 94dvh; padding: 0; border: 0; border-radius: 12px; }
+.archive-dialog[open] { display: flex; flex-direction: column; }
+.archive-dialog::backdrop { background: #000a; }
+.archive-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 1rem; }
+.archive-dialog header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.archive-dialog iframe { flex: 1; min-height: 0; width: 100%; border: 0; background: white; }
+.archive-dialog > p { padding: 1rem; }

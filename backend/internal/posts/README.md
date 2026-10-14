@@ -33,3 +33,14 @@
 - `GET /api/v1/photos/{id}`: бинарный PNG/JPEG; доступен владельцу либо посетителю public/published поста, `Cache-Control: no-store`, `nosniff`. При draft или private публичный доступ прекращается.
 
 Политика Markdown/фото, лимиты и компромиссы: [ADR-0001](../../../docs/decisions/0001-post-content-and-uploads.md). Раздел черновиков в UI остаётся будущей задачей.
+
+## Копии ссылок
+
+Независимая опция `index_rag` (false по умолчанию) включает фоновое извлечение/очистку текста и индексацию в Qdrant. View возвращает `index_rag` и `rag_state` (pending/ready/failed либо пусто). Миграция `00008_link_rag.sql`, устройство и очистка — [search README](../search/README.md). Выключение флага/смена типа/draft исключают активную генерацию сразу, внешние точки удаляются в фоне. Повторное сохранение failed с включённым флагом запускает новую попытку. Ошибка индексации не меняет результат копии/эскиза.
+
+Миграция `00006_link_captures.sql`. В Write добавлены `save_copy` и `create_thumbnail` (false по умолчанию в форме), только для link. Сохранение поста и постановка `post.capture` выполняются в одной транзакции. View возвращает эти опции, `capture_state`, `capture_warning`, `copy_url`, `thumbnail_url`; URL результатов пусты до ready. Изменение URL/опций создаёт новую ревизию, устаревшая задача не публикуется. Failed можно повторить сохранением формы; простое изменение названия не пересоздаёт готовую копию.
+
+- `GET /api/v1/posts/{id}/copy`: JSON bundle HTML+base64 resources, автор или public/published, иначе 404. HTML нельзя вставлять в DOM приложения; использовать opaque sandbox и CSP, как в frontend.
+- `GET /api/v1/posts/{id}/thumbnail`: PNG, те же права; пока не готов или не запрошен — 404.
+
+API монтирует BLOB_ROOT read-only. Worker должен иметь CAPTURE_URL, CAPTURE_TOKEN и доступ на запись к BLOB_ROOT. Без capture базовый CRUD работает; запрошенная обработка повторяется в фоне и может завершиться failed. Все ограничения и безопасность описаны в [ADR-0002](../../../docs/decisions/0002-static-link-captures.md).

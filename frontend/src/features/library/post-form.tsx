@@ -14,6 +14,9 @@ export function PostForm({ post, onClose, onSaved }: { post?: SavedPost; onClose
   const [visibility, setVisibility] = useState<PostWrite['visibility']>(post?.visibility === 'public' ? 'public' : 'private');
   const [tags, setTags] = useState<PostWrite['tags']>(post?.tags.map(t => ({ id: t.id, title: t.title })) ?? []);
   const [markdown, setMarkdown] = useState(post?.markdown ?? ''); const [url, setURL] = useState(post?.url ?? '');
+  const [indexRAG, setIndexRAG] = useState(post?.index_rag ?? false);
+  const [saveCopy, setSaveCopy] = useState(post?.save_copy ?? false);
+  const [createThumbnail, setCreateThumbnail] = useState(post?.create_thumbnail ?? false);
   const [photos, setPhotos] = useState<Photo[]>(post?.photos ?? []); const urls = usePhotoURLs(photos);
   const [busy, setBusy] = useState(false); const [uploading, setUploading] = useState(false); const [error, setError] = useState('');
   const uploadLock = useRef(false);
@@ -33,7 +36,7 @@ export function PostForm({ post, onClose, onSaved }: { post?: SavedPost; onClose
     if (!tags.length) { setError('Добавьте хотя бы один тег.'); return; }
     if (type === 'photo' && !photos.length) { setError('Добавьте хотя бы одну фотографию.'); return; }
     setBusy(true); setError('');
-    try { await savePost({ title, type, visibility, tags, markdown: type === 'note' ? markdown : '', url: type === 'link' ? url : '', photo_ids: type === 'photo' ? photos.map(p => p.id) : [] }, post?.id); onSaved(); }
+    try { await savePost({ title, type, visibility, tags, index_rag: type === 'link' && indexRAG, save_copy: type === 'link' && saveCopy, create_thumbnail: type === 'link' && createThumbnail, markdown: type === 'note' ? markdown : '', url: type === 'link' ? url : '', photo_ids: type === 'photo' ? photos.map(p => p.id) : [] }, post?.id); onSaved(); }
     catch (e) { setError(apiError(e).message); } finally { setBusy(false); }
   }
   return <dialog ref={dialog} className="post-dialog" aria-labelledby="post-form-title" onCancel={e => { e.preventDefault(); if (!busy && !uploading) onClose(); }}>
@@ -45,7 +48,7 @@ export function PostForm({ post, onClose, onSaved }: { post?: SavedPost; onClose
         <label>Кто увидит пост<select value={visibility} onChange={e => setVisibility(e.target.value as PostWrite['visibility'])}><option value="private">Только я</option><option value="public">Все — публичная лента</option></select></label>
         <TagPicker value={tags} onChange={setTags} disabled={busy || uploading} />
         {type === 'note' && <Suspense fallback={<p>Загрузка редактора…</p>}><MarkdownEditor value={markdown} onChange={setMarkdown} disabled={busy || uploading} /></Suspense>}
-        {type === 'link' && <label>Адрес ссылки *<input type="url" required maxLength={4096} value={url} onChange={e => setURL(e.target.value)} placeholder="https://example.com" /></label>}
+        {type === 'link' && <section className="link-options"><label>Адрес ссылки *<input type="url" required maxLength={4096} value={url} onChange={e => setURL(e.target.value)} placeholder="https://example.com" /></label><label className="capture-option"><input type="checkbox" checked={saveCopy} onChange={e => setSaveCopy(e.target.checked)} />Сохранить копию страницы</label><label className="capture-option"><input type="checkbox" checked={createThumbnail} onChange={e => setCreateThumbnail(e.target.checked)} />Создать эскиз страницы</label><label className="capture-option"><input type="checkbox" checked={indexRAG} onChange={e => setIndexRAG(e.target.checked)} />Индексация для RAG</label><small>Индексация очищает текст страницы и сохраняет его для поиска. Результат придёт в уведомлении.</small>{post?.rag_state === 'failed' && <small role="status">Индексация не завершилась. Сохраните пост с включённым флагом для повторной попытки.</small>}<small>Копия и эскиз появятся после фоновой обработки. Можно сохранить пост и продолжить работу.</small>{post?.capture_state === 'failed' && <small role="status">Не удалось обработать страницу. Сохраните пост, чтобы повторить попытку.</small>}</section>}
         {type === 'photo' && <section><div {...dropzone.getRootProps({ className: 'photo-dropzone', 'aria-label': 'Добавить фотографии' })}><input {...dropzone.getInputProps()} /><ImagePlus /><strong>{uploading ? 'Проверяем и загружаем…' : 'Перетащите фотографии или выберите файлы'}</strong><small>До 32 фото · JPG, PNG, GIF, BMP, WebP · до 10 МБ / 20 Мп · GIF: первый кадр</small></div><div className="photo-grid upload-grid">{photos.map((p, i) => <div className="upload-preview" key={p.id}>{urls[p.id] ? <img src={urls[p.id]} alt={`Загруженное фото ${i + 1}`} /> : <span>Загружаем превью…</span>}<button type="button" aria-label={`Удалить фото ${i + 1}`} onClick={() => setPhotos(current => current.filter(x => x.id !== p.id))}><X size={16} /></button></div>)}</div><small>{photos.length} / 32</small></section>}
       </fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}

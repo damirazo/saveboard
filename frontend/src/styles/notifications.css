@@ -1,0 +1,17 @@
+.app-topbar .notification-bell { display: inline-flex; flex-direction: column; gap: 2px; align-items: center; min-width: 40px; padding: 4px; line-height: 1; }
+.notification-bell span { font-size: 11px; font-weight: 700; }
+.notification-list { list-style: none; padding: 0; margin: 24px 0; }
+.notification-list li { border-bottom: 1px solid var(--sb-border); }
+.notification-list button { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; padding: 20px 12px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.notification-list button:hover { background: var(--sb-background); }
+.notification-list .is-unread { font-weight: 700; }
+.unread-dot { flex: 0 0 8px; height: 8px; border-radius: 50%; background: var(--sb-primary); }
+.notification-dialog { margin: auto; width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; border: 1px solid var(--sb-border); border-radius: 18px; padding: 24px; color: var(--sb-text); box-shadow: var(--sb-shadow); }
+.notification-dialog::backdrop { background: #13203999; }
+.notification-dialog header { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.notification-dialog h2 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.notification-dialog a { display: inline-block; margin-top: 18px; color: var(--sb-primary); text-decoration: underline; text-underline-offset: 3px; }
+.notification-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.notification-importance { margin: 16px 0 8px; font-weight: 600; color: var(--sb-muted); }
+.notification-importance.important { color: #926300; }
+.notification-importance.critical { color: #b91c1c; }

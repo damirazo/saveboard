@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"saveboard/internal/identity"
+	"saveboard/internal/notifications"
 	"saveboard/internal/posts"
 	"time"
 )
@@ -17,6 +18,7 @@ type Dependencies struct {
 	Ping          func(context.Context) error
 	Auth          *identity.AuthService
 	Posts         *posts.Service
+	Notifications *notifications.Service
 	SecureCookies bool
 }
 type HealthOutput struct {
@@ -58,6 +60,7 @@ func New(deps Dependencies) (http.Handler, huma.API) {
 	a := humachi.New(r, c)
 	registerAuth(a, deps)
 	registerPosts(a, deps)
+	registerNotifications(a, deps)
 	huma.Get(a, "/api/health/live", func(ctx context.Context, _ *struct{}) (*HealthOutput, error) {
 		out := &HealthOutput{}
 		out.Body.Status = "ok"
@@ -78,6 +81,7 @@ func New(deps Dependencies) (http.Handler, huma.API) {
 		out.Body.Name = "Saveboard"
 		out.Body.Stage = "foundation"
 		out.Body.Authentication = deps.Auth != nil
+		out.Body.Capture = deps.Posts != nil && deps.Posts.Blobs != nil
 		return out, nil
 	})
 	return otelhttp.NewHandler(r, "http"), a

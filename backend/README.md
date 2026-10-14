@@ -14,7 +14,11 @@ pnpm api:generate
 
 `pnpm check` проверяет Go и capture. Интеграционный тест использует Docker/Testcontainers и отдельную временную БД. `pnpm api:generate` экспортирует `api/openapi.json`, не обращаясь к frontend.
 
-Для запуска задать `DATABASE_URL`, `AUTH_JWT_KEY` и `AUTH_ENCRYPTION_KEY` (разные случайные ключи по 32 байта, hex), затем `pnpm migrate`, `pnpm dev`, в другом терминале `pnpm dev:worker`. Capture отдельно: `pnpm dev:capture` с `CAPTURE_TOKEN` длиной от 32 символов. API входа по username/email, JWT/refresh, OAuth/OIDC и выхода описан в [identity/README.md](internal/identity/README.md). Capture пока не включён.
+Для запуска задать `DATABASE_URL`, `AUTH_JWT_KEY` и `AUTH_ENCRYPTION_KEY` (разные случайные ключи по 32 байта, hex), затем `pnpm migrate`, `pnpm dev`, в другом терминале `pnpm dev:worker`. Capture отдельно: `pnpm dev:capture` с `CAPTURE_TOKEN` длиной от 32 символов. API входа по username/email, JWT/refresh, OAuth/OIDC и выхода описан в [identity/README.md](internal/identity/README.md). Capture включается только с изолированным egress-шлюзом.
+
+Статические копии ссылок и эскизы выполняются фоновой River-задачей. Изоляция и запуск — [capture README](capture/README.md). Старая заглушка сохраняется только при запуске capture без `CAPTURE_EGRESS_URL`.
+
+Независимая фоновая RAG-индексация ссылок реализована через Readability, канонический документ PostgreSQL, Ollama BGE-M3 и Qdrant: [search README](internal/search/README.md). Поиск/RAG-chat API пока не реализован.
 
 Docker build-контекст — этот каталог:
 

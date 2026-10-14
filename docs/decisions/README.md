@@ -9,5 +9,8 @@
 ## Индекс
 
 - [ADR-0001: Посты, Markdown и загружаемые фотографии](0001-post-content-and-uploads.md) — accepted.
+- [ADR-0002: Фоновые статические копии ссылок](0002-static-link-captures.md) — accepted.
+- [ADR-0003: Жизненный цикл capture и уведомления](0003-durable-capture-notifications.md) — accepted.
+- [ADR-0004: Независимая индексация текста ссылок](0004-link-rag-indexing.md) — accepted.
 
 Первоначальное направление: [архитектура](../architecture.md) и [исследование](../research.md).

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 type Info struct {
@@ -20,6 +21,7 @@ type Store interface {
 	Get(context.Context, string) (io.ReadCloser, error)
 	Stat(context.Context, string) (Info, error)
 	Delete(context.Context, string) error
+	PublishAlias(context.Context, string, string) error
 }
 
 type Local struct {
@@ -28,6 +30,39 @@ type Local struct {
 }
 
 var validKey = regexp.MustCompile(`^[a-f0-9]{64}$`)
+
+// ReadOnly opens existing storage without creating directories; mount it read-only in API.
+func ReadOnly(root string) *Local { return &Local{root: root} }
+
+// PublishAlias preserves the salted site/path hierarchy without duplicating CAS bytes.
+// Call only from the worker; callers never provide raw URL path components.
+func (s *Local) PublishAlias(ctx context.Context, key, relative string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	parts := strings.Split(relative, "/")
+	if len(parts) < 2 || len(parts) > 128 {
+		return fmt.Errorf("invalid archive path")
+	}
+	component := regexp.MustCompile(`^[a-f0-9]{64}(\.(html|css))?$`)
+	for _, part := range parts {
+		if !component.MatchString(part) {
+			return fmt.Errorf("invalid archive path")
+		}
+	}
+	source, err := s.path(key)
+	if err != nil {
+		return err
+	}
+	target := filepath.Join(s.root, "sites", filepath.FromSlash(relative))
+	if err = os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+		return err
+	}
+	if err = os.Link(source, target); err != nil && !os.IsExist(err) {
+		return err
+	}
+	return nil
+}
 
 func NewLocal(root string, maxBytes int64) (*Local, error) {
 	if maxBytes <= 0 {
