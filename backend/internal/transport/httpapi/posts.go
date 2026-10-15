@@ -31,6 +31,8 @@ type PostsInput struct {
 	Scope         string `query:"scope" enum:"public,mine" default:"public"`
 	Type          string `query:"type" enum:"note,link,photo"`
 	Query         string `query:"q" maxLength:"200"`
+	IncludedTags  string `query:"include_tags" maxLength:"739" doc:"Comma-separated existing tag UUIDs; all required, at most 20"`
+	ExcludedTags  string `query:"exclude_tags" maxLength:"739" doc:"Comma-separated tag UUIDs; any match excludes a post, at most 20"`
 	Sort          string `query:"sort" enum:"new,old" default:"new"`
 	Page          int    `query:"page" minimum:"1" maximum:"10000" default:"1"`
 	Size          int    `query:"size" minimum:"1" maximum:"50" default:"10"`
@@ -90,7 +92,7 @@ func registerPosts(api huma.API, deps Dependencies) {
 		if e != nil {
 			return nil, e
 		}
-		v, e := deps.Posts.List(ctx, who, in.Scope, in.Type, in.Query, in.Sort, in.Page, in.Size)
+		v, e := deps.Posts.List(ctx, who, in.Scope, in.Type, in.Query, in.Sort, in.Page, in.Size, in.IncludedTags, in.ExcludedTags)
 		if e != nil {
 			return nil, postError(e)
 		}
@@ -139,11 +141,11 @@ func registerPosts(api huma.API, deps Dependencies) {
 		}
 		return nil, nil
 	})
-	huma.Register(api, op("tags-suggest", http.MethodGet, "/api/v1/post-tags", true), func(ctx context.Context, in *struct {
+	huma.Register(api, op("tags-suggest", http.MethodGet, "/api/v1/post-tags", false), func(ctx context.Context, in *struct {
 		Authorization string `header:"Authorization"`
 		Query         string `query:"q" maxLength:"80"`
 	}) (*TagsOutput, error) {
-		if _, e := viewer(ctx, in.Authorization, true); e != nil {
+		if _, e := viewer(ctx, in.Authorization, false); e != nil {
 			return nil, e
 		}
 		tags, e := deps.Posts.Tags(ctx, in.Query)

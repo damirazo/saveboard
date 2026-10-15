@@ -67,3 +67,8 @@
 @media(max-width:620px) { .pagination { justify-content:center; }.pagination-summary { flex-basis:100%; text-align:center; } }
 @media(pointer:coarse) { .ui-button,.ui-select { min-height:44px; }.ui-input,.ui-select { font-size:16px; } }
 .auth-fields { display:grid; gap:18px; border:0; margin:0; padding:0; min-width:0; }
+
+.search-controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.search-controls .library-search { flex:1; min-width:220px; }
+.search-tags { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:16px; margin-top:16px; }
+.search-tags > * { min-width:0; }

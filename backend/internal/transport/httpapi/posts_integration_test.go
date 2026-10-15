@@ -166,6 +166,67 @@ func TestPostsAPI(t *testing.T) {
 	if post.Status != "draft" {
 		t.Fatal("edit republished draft")
 	}
+	t.Run("search", func(t *testing.T) {
+		create := func(title, visibility, who string, tags ...string) posts.View {
+			input := posts.Write{Title: title, Type: "note", Visibility: visibility, Markdown: "literal 50%_ body", PhotoIDs: []string{}}
+			for _, tag := range tags {
+				input.Tags = append(input.Tags, posts.TagInput{Title: tag})
+			}
+			w := call("POST", "/api/v1/posts", who, input, 200)
+			var v posts.View
+			if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
+				t.Fatal(err)
+			}
+			return v
+		}
+		a := create("Needle", "public", token, "Alpha", "Beta")
+		b := create("Second", "public", token, "Alpha")
+		create("Needle private", "private", other, "Alpha", "Beta")
+		create("Own private", "private", token, "Alpha", "Beta")
+		d := create("Needle draft", "public", token, "Alpha", "Beta")
+		call("DELETE", "/api/v1/posts/"+d.ID, token, nil, 204)
+		alpha, beta := "", ""
+		for _, tag := range a.Tags {
+			if tag.Title == "Alpha" {
+				alpha = tag.ID.String()
+			} else {
+				beta = tag.ID.String()
+			}
+		}
+		for _, tc := range []struct {
+			query, who string
+			total      int
+		}{
+			{"q=EED", "", 1}, {"q=body", "", 2}, {"q=Alpha", "", 0}, {"q=50%25_", "", 2},
+			{"include_tags=" + alpha + "," + beta, "", 1},
+			{"include_tags=" + alpha + "," + alpha, "", 2},
+			{"include_tags=" + alpha + "&exclude_tags=" + beta, "", 1},
+			{"exclude_tags=" + beta, "", 1},
+			{"include_tags=" + alpha + "&exclude_tags=" + alpha, "", 0},
+			{"exclude_tags=" + alpha + "," + beta, "", 0},
+			{"include_tags=" + uuid.NewString(), "", 0},
+			{"scope=mine&include_tags=" + alpha + "," + beta, token, 2},
+			{"scope=mine&include_tags=" + alpha + "," + beta, other, 1},
+			{"include_tags=" + alpha + "&size=1&page=2", "", 2},
+		} {
+			w := call("GET", "/api/v1/posts?"+tc.query, tc.who, nil, 200)
+			var result posts.Page
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Total != tc.total {
+				t.Fatalf("%s: total=%d want=%d", tc.query, result.Total, tc.total)
+			}
+			for _, item := range result.Items {
+				if tc.who == "" && item.ID != a.ID && item.ID != b.ID {
+					t.Fatal("ACL leak")
+				}
+			}
+		}
+		call("GET", "/api/v1/posts?include_tags=invalid", token, nil, 422)
+		call("GET", "/api/v1/posts?exclude_tags=invalid", token, nil, 422)
+		call("GET", "/api/v1/post-tags?q=Al", "", nil, 200)
+	})
 	if _, err = db.DB.ExecContext(ctx, "UPDATE users SET status='disabled',disabled_at=now() WHERE id=$1", owner); err != nil {
 		t.Fatal(err)
 	}

@@ -2182,11 +2182,6 @@
             "description": "Service Unavailable"
           }
         },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
         "tags": [
           "Posts"
         ]
@@ -2235,6 +2230,28 @@
             "name": "q",
             "schema": {
               "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated existing tag UUIDs; all required, at most 20",
+            "explode": false,
+            "in": "query",
+            "name": "include_tags",
+            "schema": {
+              "description": "Comma-separated existing tag UUIDs; all required, at most 20",
+              "maxLength": 739,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated tag UUIDs; any match excludes a post, at most 20",
+            "explode": false,
+            "in": "query",
+            "name": "exclude_tags",
+            "schema": {
+              "description": "Comma-separated tag UUIDs; any match excludes a post, at most 20",
+              "maxLength": 739,
               "type": "string"
             }
           },

@@ -323,10 +323,26 @@ func (s *Service) Get(ctx context.Context, viewer, id string) (View, error) {
 	}
 	return v, err
 }
-func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string, page, size int) (Page, error) {
+func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string, page, size int, included, excluded string) (Page, error) {
 	out := Page{Items: []View{}}
-	where := ` FROM posts p WHERE p.status='published' AND (($1='mine' AND p.author_id::text=$2) OR ($1='public' AND p.visibility='public')) AND ($3='' OR p.type=$3) AND ($4='' OR strpos(lower(p.title || ' ' || COALESCE((SELECT text FROM post_notes WHERE post_id=p.id),'')),lower($4))>0 OR EXISTS(SELECT 1 FROM post_tag_links l JOIN post_tags t ON t.id=l.tag_id WHERE l.post_id=p.id AND strpos(lower(t.title),lower($4))>0))`
-	args := []any{scope, viewer, kind, q}
+	for _, list := range []string{included, excluded} {
+		if list == "" {
+			continue
+		}
+		ids := strings.Split(list, ",")
+		if len(ids) > 20 {
+			return out, ErrInvalid
+		}
+		for _, id := range ids {
+			if _, err := uuid.Parse(id); err != nil || len(id) != 36 {
+				return out, ErrInvalid
+			}
+		}
+	}
+	where := ` FROM posts p WHERE p.status='published' AND (($1='mine' AND p.author_id::text=$2) OR ($1='public' AND p.visibility='public')) AND ($3='' OR p.type=$3) AND ($4='' OR strpos(lower(p.title),lower($4))>0 OR strpos(lower(COALESCE((SELECT text FROM post_notes WHERE post_id=p.id),'')),lower($4))>0)
+	AND NOT EXISTS (SELECT 1 FROM unnest(string_to_array($5, ',')::uuid[]) wanted(id) WHERE NOT EXISTS (SELECT 1 FROM post_tag_links l WHERE l.post_id=p.id AND l.tag_id=wanted.id))
+	AND NOT EXISTS (SELECT 1 FROM post_tag_links l WHERE l.post_id=p.id AND l.tag_id=ANY(string_to_array($6, ',')::uuid[]))`
+	args := []any{scope, viewer, kind, q, included, excluded}
 	if err := s.DB.QueryRowContext(ctx, "SELECT count(*)"+where, args...).Scan(&out.Total); err != nil {
 		return out, err
 	}
@@ -334,7 +350,7 @@ func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string,
 	if sort == "old" {
 		order = " ASC"
 	}
-	rows, err := s.DB.QueryContext(ctx, "SELECT p.id"+where+" ORDER BY p.created_at"+order+",p.id"+order+" LIMIT $5 OFFSET $6", append(args, size, (page-1)*size)...)
+	rows, err := s.DB.QueryContext(ctx, "SELECT p.id"+where+" ORDER BY p.created_at"+order+",p.id"+order+" LIMIT $7 OFFSET $8", append(args, size, (page-1)*size)...)
 	if err != nil {
 		return out, err
 	}

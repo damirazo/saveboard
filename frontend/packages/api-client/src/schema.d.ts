@@ -1768,6 +1768,10 @@ export interface operations {
                 scope?: "public" | "mine";
                 type?: "note" | "link" | "photo";
                 q?: string;
+                /** @description Comma-separated existing tag UUIDs; all required, at most 20 */
+                include_tags?: string;
+                /** @description Comma-separated tag UUIDs; any match excludes a post, at most 20 */
+                exclude_tags?: string;
                 sort?: "new" | "old";
                 page?: number;
                 size?: number;
