@@ -52,6 +52,7 @@ type View struct {
 	ID              string      `json:"id"`
 	AuthorID        string      `json:"author_id"`
 	Author          string      `json:"author"`
+	AuthorName      string      `json:"author_name"`
 	Title           string      `json:"title"`
 	Type            string      `json:"type"`
 	Visibility      string      `json:"visibility"`
@@ -277,7 +278,7 @@ func (s *Service) Draft(ctx context.Context, owner, id string) error {
 }
 func (s *Service) Get(ctx context.Context, viewer, id string) (View, error) {
 	v := View{Tags: []Tag{}, Photos: []PhotoView{}}
-	err := s.DB.QueryRowContext(ctx, `SELECT p.id,p.author_id,u.username,p.title,p.type,p.visibility,p.status,p.created_at,COALESCE(n.text,''),COALESCE(l.url,'') FROM posts p JOIN users u ON u.id=p.author_id LEFT JOIN post_notes n ON n.post_id=p.id LEFT JOIN post_links l ON l.post_id=p.id WHERE p.id=$1 AND (p.author_id::text=$2 OR (p.status='published' AND p.visibility='public'))`, id, viewer).Scan(&v.ID, &v.AuthorID, &v.Author, &v.Title, &v.Type, &v.Visibility, &v.Status, &v.CreatedAt, &v.Markdown, &v.URL)
+	err := s.DB.QueryRowContext(ctx, `SELECT p.id,p.author_id,u.username,u.display_name,p.title,p.type,p.visibility,p.status,p.created_at,COALESCE(n.text,''),COALESCE(l.url,'') FROM posts p JOIN users u ON u.id=p.author_id LEFT JOIN post_notes n ON n.post_id=p.id LEFT JOIN post_links l ON l.post_id=p.id WHERE p.id=$1 AND (p.author_id::text=$2 OR (p.status='published' AND p.visibility='public'))`, id, viewer).Scan(&v.ID, &v.AuthorID, &v.Author, &v.AuthorName, &v.Title, &v.Type, &v.Visibility, &v.Status, &v.CreatedAt, &v.Markdown, &v.URL)
 	if errors.Is(err, sql.ErrNoRows) {
 		return v, ErrNotFound
 	}
@@ -323,7 +324,7 @@ func (s *Service) Get(ctx context.Context, viewer, id string) (View, error) {
 	}
 	return v, err
 }
-func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string, page, size int, included, excluded string) (Page, error) {
+func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string, page, size int, included, excluded, author string) (Page, error) {
 	out := Page{Items: []View{}}
 	for _, list := range []string{included, excluded} {
 		if list == "" {
@@ -339,10 +340,10 @@ func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string,
 			}
 		}
 	}
-	where := ` FROM posts p WHERE p.status='published' AND (($1='mine' AND p.author_id::text=$2) OR ($1='public' AND p.visibility='public')) AND ($3='' OR p.type=$3) AND ($4='' OR strpos(lower(p.title),lower($4))>0 OR strpos(lower(COALESCE((SELECT text FROM post_notes WHERE post_id=p.id),'')),lower($4))>0)
+	where := ` FROM posts p JOIN users u ON u.id=p.author_id WHERE ($7='' OR lower(u.username)=lower($7)) AND p.status='published' AND (($1='mine' AND p.author_id::text=$2) OR ($1='public' AND p.visibility='public')) AND ($3='' OR p.type=$3) AND ($4='' OR strpos(lower(p.title),lower($4))>0 OR strpos(lower(COALESCE((SELECT text FROM post_notes WHERE post_id=p.id),'')),lower($4))>0)
 	AND NOT EXISTS (SELECT 1 FROM unnest(string_to_array($5, ',')::uuid[]) wanted(id) WHERE NOT EXISTS (SELECT 1 FROM post_tag_links l WHERE l.post_id=p.id AND l.tag_id=wanted.id))
 	AND NOT EXISTS (SELECT 1 FROM post_tag_links l WHERE l.post_id=p.id AND l.tag_id=ANY(string_to_array($6, ',')::uuid[]))`
-	args := []any{scope, viewer, kind, q, included, excluded}
+	args := []any{scope, viewer, kind, q, included, excluded, author}
 	if err := s.DB.QueryRowContext(ctx, "SELECT count(*)"+where, args...).Scan(&out.Total); err != nil {
 		return out, err
 	}
@@ -350,7 +351,7 @@ func (s *Service) List(ctx context.Context, viewer, scope, kind, q, sort string,
 	if sort == "old" {
 		order = " ASC"
 	}
-	rows, err := s.DB.QueryContext(ctx, "SELECT p.id"+where+" ORDER BY p.created_at"+order+",p.id"+order+" LIMIT $7 OFFSET $8", append(args, size, (page-1)*size)...)
+	rows, err := s.DB.QueryContext(ctx, "SELECT p.id"+where+" ORDER BY p.created_at"+order+",p.id"+order+" LIMIT $8 OFFSET $9", append(args, size, (page-1)*size)...)
 	if err != nil {
 		return out, err
 	}

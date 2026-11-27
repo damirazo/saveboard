@@ -87,6 +87,25 @@ func TestPostsAPI(t *testing.T) {
 	if post.ID == "" || len(post.Tags) != 1 || post.Tags[0].Name != "privet-mir" {
 		t.Fatalf("bad post %+v", post)
 	}
+	name := map[string]string{"display_name": "Новое имя"}
+	call("PATCH", "/api/v1/auth/me", "", name, 401)
+	call("PATCH", "/api/v1/auth/me", token, map[string]string{"display_name": "   "}, 422)
+	call("PATCH", "/api/v1/auth/me", token, name, 204)
+	call("GET", "/api/v1/profiles/missing", "", nil, 404)
+	profile := func(want int) {
+		t.Helper()
+		response := call("GET", "/api/v1/profiles/OWNER", "", nil, 200)
+		var p identity.PublicProfile
+		if err := json.Unmarshal(response.Body.Bytes(), &p); err != nil || p.DisplayName != "Новое имя" || p.Username != "owner" || p.PublicPosts != want {
+			t.Fatalf("profile: %+v, error: %v", p, err)
+		}
+	}
+	profile(1)
+	filtered := call("GET", "/api/v1/posts?author=other&size=1", "", nil, 200)
+	var filteredPage posts.Page
+	if err := json.Unmarshal(filtered.Body.Bytes(), &filteredPage); err != nil || filteredPage.Total != 0 || len(filteredPage.Items) != 0 {
+		t.Fatalf("author filter: %+v, error: %v", filteredPage, err)
+	}
 	path := "/api/v1/posts/" + post.ID
 	call("PUT", path, other, draft, 403)
 	call("DELETE", path, other, nil, 403)
@@ -105,6 +124,7 @@ func TestPostsAPI(t *testing.T) {
 	call("PUT", path, token, draft, 200)
 	call("GET", path, "", nil, 404)
 	call("GET", path, other, nil, 404)
+	profile(0)
 	w = call("GET", "/api/v1/posts?scope=public", "", nil, 200)
 	var page posts.Page
 	_ = json.Unmarshal(w.Body.Bytes(), &page)

@@ -21,6 +21,10 @@ async function setup(page: Page) {
       const i = posts.findIndex(p => p.id === id); if (i < 0) posts.unshift(p); else posts[i] = p;
       await route.fulfill({ json: p }); return;
     }
+    if (/\/api\/v1\/posts\/[^/]+$/.test(url.pathname)) {
+      const p = posts.find(post => url.pathname.endsWith('/' + post.id));
+      await route.fulfill(p ? { json: p } : { status: 404, json: {} }); return;
+    }
     const items = posts.filter(p => p.status === 'published' && (url.searchParams.get('scope') === 'mine' || p.visibility === 'public'));
     await route.fulfill({ json: { items, total: items.length } });
   });
@@ -31,10 +35,10 @@ async function setup(page: Page) {
 test('create, edit, render markdown and remove into drafts', async ({ page }) => {
   const posts = await setup(page);
   await page.getByRole('button', { name: 'Создать пост' }).click();
-  const form = page.getByRole('dialog');
+  const form = page.getByRole('form');
   await form.getByLabel('Наименование').fill('Первая заметка');
   await form.getByRole('combobox', { name: 'Теги' }).fill('Тех');
-  await expect(form.getByRole('listbox').getByRole('option').first()).toContainText('Создать тег');
+  await expect(form.getByRole('listbox').getByRole('option').last()).toContainText('Создать тег');
   await form.getByRole('button', { name: '# Технологии', exact: true }).click();
   await form.getByRole('combobox', { name: 'Теги' }).fill('Технологии');
   await expect(form.getByRole('button', { name: /Создать тег/ })).toHaveCount(0);
@@ -59,8 +63,8 @@ test('create, edit, render markdown and remove into drafts', async ({ page }) =>
 
 test('32 photos, responsive collapse and fullscreen navigation', async ({ page }) => {
   await setup(page); await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Создать пост' }).click(); const form = page.getByRole('dialog');
-  await form.getByLabel('Наименование').fill('Альбом'); await form.getByRole('button', { name: 'Фото', exact: true }).click();
+  await page.getByRole('button', { name: 'Создать пост' }).click(); const form = page.getByRole('form');
+  await form.getByLabel('Наименование').fill('Альбом'); await form.getByLabel('Тип поста').selectOption('photo');
   await form.getByRole('combobox', { name: 'Теги' }).fill('Фото'); await form.getByRole('button', { name: /Создать тег/ }).click();
   const file = { name: 'image.png', mimeType: 'image/png', buffer: png };
   await form.locator('input[type=file]').setInputFiles(Array.from({ length: 33 }, (_, i) => ({ ...file, name: `${i}.png` })));
@@ -80,8 +84,8 @@ test('32 photos, responsive collapse and fullscreen navigation', async ({ page }
 
 test('link options, pending capture, thumbnail and offline sandbox on desktop and mobile', async ({page})=>{
   const posts=await setup(page);
-  await page.getByRole('button',{name:'Создать пост'}).click();const form=page.getByRole('dialog');
-  await form.getByRole('button',{name:'Ссылка',exact:true}).click();
+  await page.getByRole('button',{name:'Создать пост'}).click();const form=page.getByRole('form');
+  await form.getByLabel('Тип поста').selectOption('link');
   await expect(form.getByLabel('Сохранить копию страницы')).not.toBeChecked();
   await expect(form.getByLabel('Создать эскиз страницы')).not.toBeChecked();
   await expect(form.getByLabel('Индексация для RAG')).not.toBeChecked();
@@ -119,8 +123,8 @@ test('link options, pending capture, thumbnail and offline sandbox on desktop an
 
 test('independent RAG checkbox persists on edit and can be disabled on mobile', async ({ page }) => {
   const posts = await setup(page);
-  await page.getByRole('button', { name: 'Создать пост' }).click(); const form = page.getByRole('dialog');
-  await form.getByRole('button', { name: 'Ссылка', exact: true }).click();
+  await page.getByRole('button', { name: 'Создать пост' }).click(); const form = page.getByRole('form');
+  await form.getByLabel('Тип поста').selectOption('link');
   await expect(form.getByLabel('Индексация для RAG')).not.toBeChecked();
   await form.getByLabel('Наименование').fill('Документ RAG');
   await form.getByLabel('Адрес ссылки').fill('https://example.com/article');

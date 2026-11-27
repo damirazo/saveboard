@@ -59,3 +59,7 @@ Access JWT живёт до 15 минут, вся сессия — 30 дней о
 Проверка: `go test ./...`, `go vet ./...`, `pnpm test:integration` (Docker, отдельные временные PostgreSQL и тестовый OIDC с подписанными ID tokens). Последовательный запуск пакетов избегает гонки инициализации Docker provider в Testcontainers на Windows. API-контракт: `pnpm api:generate` из корня.
 
 Основа политики refresh replay: [RFC 9700, раздел 4.14](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14).
+
+## Профиль
+
+`GET /api/v1/profiles/{username}` возвращает публичное имя, username и число публичных опубликованных постов активного пользователя. `GET /api/v1/auth/me` также возвращает собственные username и display_name. `PATCH /api/v1/auth/me` с полем `display_name` меняет имя только текущего пользователя (1–100 символов, пустое имя после удаления крайних пробелов отклоняется).

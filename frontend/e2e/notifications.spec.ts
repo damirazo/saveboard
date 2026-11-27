@@ -4,7 +4,7 @@ test('notifications: bell, pagination, modal, read receipt and post link', async
   const items = Array.from({ length: 11 }, (_, i) => ({ id: `notification-${i}`, title: `Сообщение ${i}`, text: 'Готово <script>alert(1)</script>', importance: i === 0 ? 'critical' : 'normal', read: false, post_id: 'post-1', created_at: new Date().toISOString() }));
   let readCalls = 0; let failRead = true;
   await page.route('**/api/v1/auth/**', route => route.fulfill({ json: route.request().url().endsWith('/me') ? { user_id: 'user', session_id: 'session' } : { access_token: 'test', refresh_token: 'test', expires_in: 3600, refresh_expires_at: new Date(Date.now() + 86400000).toISOString(), session_id: 'session', token_type: 'Bearer' } }));
-  await page.route('**/api/v1/posts**', route => route.fulfill({ json: route.request().url().endsWith('/post-1') ? { id: 'post-1', title: 'Готовый пост', type: 'link', url: 'https://example.com', tags: [], photos: [] } : { items: [], total: 0 } }));
+  await page.route('**/api/v1/posts**', route => route.fulfill({ json: route.request().url().endsWith('/post-1') ? { id: 'post-1', author: 'alex', author_name: 'Алексей', created_at: '2026-11-27T12:00:00Z', visibility: 'public', title: 'Готовый пост', type: 'link', url: 'https://example.com', tags: [], photos: [] } : { items: [], total: 0 } }));
   await page.route('**/api/v1/notifications**', async route => {
     const request = route.request(); const url = new URL(request.url());
     if (url.pathname.endsWith('/unread')) { await route.fulfill({ json: { count: items.filter(n => !n.read).length } }); return; }
@@ -28,7 +28,7 @@ test('notifications: bell, pagination, modal, read receipt and post link', async
   await page.getByRole('button', { name: 'Следующая страница' }).click();
   await expect(page.getByRole('button', { name: /Сообщение 10/ })).toBeVisible();
   await page.getByRole('button', { name: 'Предыдущая страница' }).click();
-  const first = page.getByRole('button', { name: /Сообщение 0$/ });
+  const first = page.getByRole('button', { name: /Сообщение 0/ });
   await expect(first).toHaveClass('is-unread'); await first.click();
   const modal = page.getByRole('dialog');
   await expect(modal.getByRole('heading', { name: 'Сообщение 0' })).toBeVisible();

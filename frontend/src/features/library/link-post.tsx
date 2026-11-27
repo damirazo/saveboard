@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiClient } from '@saveboard/api-client';
-import { X } from 'lucide-react';
+import { ArrowUpRight, Link2, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { apiError, type SavedPost } from './post-api';
 import { usePhotoURLs } from './use-photo-urls';
@@ -11,10 +11,13 @@ export function LinkPost({ post }: { post: SavedPost }) {
   const photos = post.thumbnail_url ? [{id:post.thumbnail_url,url:post.thumbnail_url}] : [];
   const urls = usePhotoURLs(photos);
   const display = Array.from(post.url); const label = display.length > 300 ? `${display.slice(0,299).join('')}…` : post.url;
+  const target = URL.canParse(post.url) ? new URL(post.url) : null;
   return <div className="link-post">
     {post.thumbnail_url && urls[post.thumbnail_url] && <img className="link-thumbnail" src={urls[post.thumbnail_url]} alt={`Эскиз страницы «${post.title}»`} width={800} height={600} />}
+    <div className="link-summary">{target && <strong><Link2 size={15} />{target.hostname}<ArrowUpRight size={14} /></strong>}
+    <a href={/^https?:\/\//i.test(post.url) ? post.url : undefined} target="_blank" rel="noopener noreferrer" className="post-link">{label}</a></div>
     {post.copy_url && <Button variant="outline" onClick={()=>setOpen(true)}>Показать копию</Button>}
-    <a href={/^https?:\/\//i.test(post.url) ? post.url : undefined} target="_blank" rel="noopener noreferrer" className="post-link">{label}</a>
+
     {open && <ArchiveDialog post={post} onClose={()=>setOpen(false)} />}
   </div>;
 }

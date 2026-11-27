@@ -9,6 +9,8 @@ export { PageHeading, EmptyState } from './content/page-heading';
 export { SearchPanel } from './content/search-panel';
 export { FilterGroup, FilterPanel } from './content/filter-panel';
 export { PostCard, TagList, LinkPreview, FilePreview, type Post } from './content/post-card';
+export { Badge } from './ui/badge';
+export { PostTypeBadge } from './content/post-type-badge';
 export { Button } from './ui/button';
 export { Input, FormField, FormMessage, Select, type SelectOption } from './ui/form-field';
 export { Divider } from './ui/divider';

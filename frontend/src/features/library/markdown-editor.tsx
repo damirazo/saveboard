@@ -10,7 +10,7 @@ export default function MarkdownEditor({ value, onChange, disabled }: { value: s
     <div className="editor-modes"><Button variant="filter" aria-pressed={!source} onClick={() => setSource(false)}>Визуальный</Button><Button variant="filter" aria-pressed={source} onClick={() => setSource(true)}>Markdown</Button></div>
     {error && <p role="alert">{error} Переключитесь в Markdown для исправления.</p>}
     {source ? <textarea aria-label="Markdown" value={value} maxLength={100000} disabled={disabled} onChange={e => { onChange(e.target.value); setError(''); }} rows={12} /> :
-      <MDXEditor markdown={value} onChange={onChange} readOnly={disabled} suppressHtmlProcessing onError={() => setError('Разметка содержит неподдерживаемые элементы.')} contentEditableClassName="markdown-body" plugins={[
+      <MDXEditor className="dark-theme" markdown={value} onChange={onChange} readOnly={disabled} suppressHtmlProcessing onError={() => setError('Разметка содержит неподдерживаемые элементы.')} contentEditableClassName="markdown-body" plugins={[
         headingsPlugin(), listsPlugin(), quotePlugin(), tablePlugin(), thematicBreakPlugin(), markdownShortcutPlugin(), linkPlugin({ disableAutoLink: true }), linkDialogPlugin(),
         codeBlockPlugin({ defaultCodeBlockLanguage: 'txt' }), codeMirrorPlugin({ codeBlockLanguages: { txt: 'Текст', js: 'JavaScript', json: 'JSON', go: 'Go' } }),
         toolbarPlugin({ toolbarContents: () => <><UndoRedo /><BoldItalicUnderlineToggles options={['Bold', 'Italic']} /><BlockTypeSelect /><ListsToggle /><CreateLink /></> }),

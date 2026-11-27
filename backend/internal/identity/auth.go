@@ -86,8 +86,10 @@ type Tokens struct {
 }
 
 type Principal struct {
-	UserID    uuid.UUID `json:"user_id"`
-	SessionID uuid.UUID `json:"session_id"`
+	Username    string    `json:"username"`
+	DisplayName string    `json:"display_name"`
+	UserID      uuid.UUID `json:"user_id"`
+	SessionID   uuid.UUID `json:"session_id"`
 }
 
 type accessClaims struct {
@@ -153,15 +155,14 @@ func (s *AuthService) Authenticate(ctx context.Context, raw string) (Principal, 
 	if err != nil {
 		return Principal{}, err
 	}
-	var ok bool
-	err = s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM sessions s JOIN users u ON u.id=s.user_id
+	err = s.db.QueryRowContext(ctx, `SELECT u.username, u.display_name FROM sessions s JOIN users u ON u.id=s.user_id
 		WHERE s.id=$1 AND u.id=$2 AND s.revoked_at IS NULL AND s.expires_at>now()
-		AND u.status='active' AND u.disabled_at IS NULL)`, p.SessionID, p.UserID).Scan(&ok)
+		AND u.status='active' AND u.disabled_at IS NULL`, p.SessionID, p.UserID).Scan(&p.Username, &p.DisplayName)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Principal{}, ErrUnauthorized
+	}
 	if err != nil {
 		return Principal{}, err
-	}
-	if !ok {
-		return Principal{}, ErrUnauthorized
 	}
 	return p, nil
 }

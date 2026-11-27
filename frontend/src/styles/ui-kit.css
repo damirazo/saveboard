@@ -1,0 +1,69 @@
+/* Базовые элементы Saveboard */
+.ui-button, .ui-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  border-radius: var(--sb-control-radius);
+}
+.ui-button { padding: 10px 15px; min-height: 40px; text-decoration: none; }
+.ui-button svg, .ui-badge svg { width: 16px; height: 16px; flex-shrink: 0; }
+.ui-button:disabled { opacity: .55; }
+.primary-button { background: var(--sb-primary); color: var(--sb-on-primary); }
+.primary-button:hover:not(:disabled) { background: var(--sb-primary-hover); }
+.outline-button, .ui-select, .ui-input {
+  background: var(--sb-field);
+  color: var(--sb-text);
+  border: 1px solid var(--sb-control-border);
+  border-radius: var(--sb-control-radius);
+}
+.outline-button:hover:not(:disabled), .icon-button:hover:not(:disabled), .filter-button:hover:not(:disabled),
+.tag-button:hover:is(button), .ui-select:hover { background: var(--sb-raised); color: var(--sb-text); }
+.icon-button { background: transparent; color: var(--sb-muted); padding: 8px; min-width: 40px; }
+.filter-button { background: transparent; color: var(--sb-muted); min-height: 36px; padding: 7px 13px; }
+.filter-button[aria-pressed=true], .filter-button[aria-current=page], .outline-button[aria-pressed=true] {
+  background: var(--sb-accent-soft); color: var(--sb-link); box-shadow: inset 0 0 0 1px color-mix(in srgb,var(--sb-primary) 38%,transparent);
+}
+.tag-button { background: var(--sb-raised); color: var(--sb-muted); border: 1px solid var(--sb-border); border-radius: 7px; padding: 3px 8px; font-size: 12px; min-height: 25px; font-weight: 500; }
+.ui-input, .ui-select { padding: 10px 12px; min-height: 42px; max-width: 100%; font-size: 14px; }
+.ui-input { width: 100%; min-width: 0; }
+.ui-select { padding-right: 8px; }
+.ui-input::placeholder { color: var(--sb-muted); }
+.ui-input[aria-invalid=true] { border-color: var(--sb-danger); }
+.form-field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 7px; }
+.form-field small { display: block; margin-top: 6px; font-size: 12px; color: var(--sb-muted); }
+.form-field .field-error { color: var(--sb-danger); }
+.password-field { position: relative; }
+.password-field input { padding-right: 50px; }
+.password-field button { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); }
+.form-error, .form-message { margin-top: 14px; padding: 12px 16px; border-radius: var(--sb-control-radius); font-size: 14px; }
+.form-error { background: var(--sb-danger-soft); color: var(--sb-danger); }
+.form-message { background: var(--sb-accent-soft); color: var(--sb-link); }
+.ui-badge { width: fit-content; border-radius: 7px; padding: 5px 9px; font-size: 12px; background: color-mix(in srgb,currentColor 10%,var(--sb-surface)); }
+.ui-badge svg { width: 14px; height: 14px; }
+.ui-badge[data-tone=violet] { color: var(--sb-violet); }
+.ui-badge[data-tone=mint] { color: var(--sb-mint); }
+.ui-badge[data-tone=pink] { color: var(--sb-pink); }
+.ui-badge[data-tone=amber] { color: var(--sb-amber); }
+@media (pointer: coarse) {
+  .ui-button, .ui-select, button.tag-button { min-height: 44px; }
+  .ui-input, .ui-select { font-size: 16px; }
+}
+
+.kit-page { width: min(100%,900px); margin: 0 auto; padding: clamp(18px,4vw,48px); }
+.kit-back { color: var(--sb-link); }
+.kit-page h1 { font-size: clamp(32px,5vw,56px); font-weight: 650; letter-spacing: -.045em; margin: 18px 0 26px; }
+.kit-section { padding: clamp(16px,3vw,26px); margin: 14px 0; }
+.kit-section h2 { font-size: 21px; font-weight: 600; margin: 0 0 16px; }
+.kit-section .form-field + .form-field { margin-top: 14px; }
+.kit-row, .kit-swatch { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kit-row + .kit-row { margin-top: 14px; }
+.kit-swatch { gap: 6px; color: var(--sb-muted); font-size: 13px; }
+.kit-swatch i { width: 20px; height: 20px; border-radius: 6px; }
+.content-filters { border: 0; background: transparent; }
+.content-filters .filter-button[aria-pressed=true] { background: var(--sb-primary); color: var(--sb-on-primary); box-shadow: none; }
+.kit-attribution { margin: var(--sb-stack-gap) 0; }
+.kit-attribution time { color: var(--sb-muted); font-size: 13px; }

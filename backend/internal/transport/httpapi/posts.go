@@ -27,6 +27,7 @@ type PostIDInput struct {
 type PostOutput struct{ Body posts.View }
 type CopyOutput struct{ Body jobs.CaptureResult }
 type PostsInput struct {
+	Author        string `query:"author" maxLength:"64" doc:"Filter by author username"`
 	Authorization string `header:"Authorization"`
 	Scope         string `query:"scope" enum:"public,mine" default:"public"`
 	Type          string `query:"type" enum:"note,link,photo"`
@@ -92,7 +93,7 @@ func registerPosts(api huma.API, deps Dependencies) {
 		if e != nil {
 			return nil, e
 		}
-		v, e := deps.Posts.List(ctx, who, in.Scope, in.Type, in.Query, in.Sort, in.Page, in.Size, in.IncludedTags, in.ExcludedTags)
+		v, e := deps.Posts.List(ctx, who, in.Scope, in.Type, in.Query, in.Sort, in.Page, in.Size, in.IncludedTags, in.ExcludedTags, in.Author)
 		if e != nil {
 			return nil, postError(e)
 		}

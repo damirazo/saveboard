@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -85,6 +86,41 @@ func registerAuth(api huma.API, deps Dependencies) {
 		}
 		return o
 	}
+	profileOp := op("public-profile", http.MethodGet, "/api/v1/profiles/{username}", false)
+	profileOp.Errors = []int{404, 422, 503}
+	huma.Register(api, profileOp, func(ctx context.Context, in *struct {
+		Username string `path:"username" maxLength:"64"`
+	}) (*struct{ Body identity.PublicProfile }, error) {
+		if err := available(); err != nil {
+			return nil, err
+		}
+		profile, err := deps.Auth.PublicProfile(ctx, in.Username)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, huma.Error404NotFound("Profile not found")
+		}
+		if err != nil {
+			return nil, authError(err)
+		}
+		return &struct{ Body identity.PublicProfile }{profile}, nil
+	})
+	huma.Register(api, op("profile-update", http.MethodPatch, "/api/v1/auth/me", true), func(ctx context.Context, in *struct {
+		Authorization string `header:"Authorization"`
+		Body          struct {
+			DisplayName string `json:"display_name" minLength:"1" maxLength:"100"`
+		}
+	}) (*struct{}, error) {
+		if err := available(); err != nil {
+			return nil, err
+		}
+		p, err := deps.Auth.Authenticate(ctx, bearer(in.Authorization))
+		if err != nil {
+			return nil, authError(err)
+		}
+		if err = deps.Auth.UpdateDisplayName(ctx, p.UserID, in.Body.DisplayName); err != nil {
+			return nil, authError(err)
+		}
+		return nil, nil
+	})
 	registrationOp := op("auth-register", http.MethodPost, "/api/v1/auth/register", false)
 	registrationOp.DefaultStatus = http.StatusCreated
 	huma.Register(api, registrationOp, func(ctx context.Context, in *RegistrationInput) (*TokenOutput, error) {

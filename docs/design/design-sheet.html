@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saveboard · Дизайн-лист</title>
+<link rel="stylesheet" href="../../frontend/src/styles/tokens.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:var(--sb-background);color:var(--sb-text);font:16px/1.55 Inter,"Segoe UI",system-ui,sans-serif}main{max-width:1260px;margin:auto;padding:clamp(18px,4vw,54px)}h1,h2{letter-spacing:-.035em;line-height:1.2}h1{font-size:clamp(32px,4vw,52px)}h2{margin:2em 0 .65em}p{max-width:75ch;color:var(--sb-muted)}a{color:var(--sb-link)}a:focus-visible{outline:3px solid var(--sb-focus);outline-offset:3px}.palette,.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr))}.palette{grid-template-columns:repeat(auto-fit,minmax(134px,1fr))}.swatch,figure{margin:0;padding:14px;background:var(--sb-surface);border-radius:var(--sb-radius)}.swatch i{display:block;height:32px;border-radius:5px;margin-bottom:8px}.grid a{display:block}figure img{display:block;width:100%;height:190px;object-fit:contain;background:var(--sb-background);border-radius:8px}figcaption{margin-top:9px}nav{display:flex;flex-wrap:wrap;gap:16px}code{font-size:.85em}
+</style>
+<main><h1>Saveboard · Дизайн-лист</h1>
+<p>Эталоны экранов для разработки. Откройте изображение, чтобы рассмотреть размеры, переносы и отступы. Имена и содержимое публикаций на макетах демонстрационные.</p>
+<nav><a href="#group-0">Навигация и лента</a>
+<a href="#group-1">Поиск и чтение</a>
+<a href="#group-2">Публикация</a>
+<a href="#group-3">Профиль и аккаунт</a></nav>
+<h2>Палитра интерфейса</h2><div class="palette">
+<div class="swatch"><i style="background:var(--sb-background)"></i>Фон<br><code>--sb-background</code></div>
+<div class="swatch"><i style="background:var(--sb-surface)"></i>Карточка<br><code>--sb-surface</code></div>
+<div class="swatch"><i style="background:var(--sb-raised)"></i>Вложение<br><code>--sb-raised</code></div>
+<div class="swatch"><i style="background:var(--sb-primary)"></i>Действие<br><code>--sb-primary</code></div>
+<div class="swatch"><i style="background:var(--sb-violet)"></i>Ссылка<br><code>--sb-violet</code></div>
+<div class="swatch"><i style="background:var(--sb-amber)"></i>Заметка<br><code>--sb-amber</code></div>
+<div class="swatch"><i style="background:var(--sb-mint)"></i>Фото<br><code>--sb-mint</code></div></div>
+<section id="group-0"><h2>Навигация и лента</h2><div class="grid"><figure><a href="screens/library-navigation-desktop.webp"><img loading="lazy" alt="Библиотека" src="screens/library-navigation-desktop.webp"></a><figcaption>Библиотека</figcaption></figure>
+<figure><a href="screens/library-navigation-mobile.webp"><img loading="lazy" alt="Мобильная библиотека" src="screens/library-navigation-mobile.webp"></a><figcaption>Мобильная библиотека</figcaption></figure>
+<figure><a href="screens/guest-home.webp"><img loading="lazy" alt="Главная страница гостя" src="screens/guest-home.webp"></a><figcaption>Главная страница гостя</figcaption></figure>
+<figure><a href="screens/library-empty.webp"><img loading="lazy" alt="Пустая библиотека" src="screens/library-empty.webp"></a><figcaption>Пустая библиотека</figcaption></figure></div></section>
+<section id="group-1"><h2>Поиск и чтение</h2><div class="grid"><figure><a href="screens/search-results.webp"><img loading="lazy" alt="Результаты поиска" src="screens/search-results.webp"></a><figcaption>Результаты поиска</figcaption></figure>
+<figure><a href="screens/search-states.webp"><img loading="lazy" alt="Начало поиска и пустая выдача" src="screens/search-states.webp"></a><figcaption>Начало поиска и пустая выдача</figcaption></figure>
+<figure><a href="screens/post-discussion.webp"><img loading="lazy" alt="Пост и обсуждение" src="screens/post-discussion.webp"></a><figcaption>Пост и обсуждение</figcaption></figure>
+<figure><a href="screens/mobile-search-post.webp"><img loading="lazy" alt="Поиск и пост на телефоне" src="screens/mobile-search-post.webp"></a><figcaption>Поиск и пост на телефоне</figcaption></figure>
+<figure><a href="screens/attachment-views.webp"><img loading="lazy" alt="Просмотр вложений" src="screens/attachment-views.webp"></a><figcaption>Просмотр вложений</figcaption></figure></div></section>
+<section id="group-2"><h2>Публикация</h2><div class="grid"><figure><a href="screens/post-type-picker-aligned.webp"><img loading="lazy" alt="Выбор типа" src="screens/post-type-picker-aligned.webp"></a><figcaption>Выбор типа</figcaption></figure>
+<figure><a href="screens/post-tag-suggestions-aligned.webp"><img loading="lazy" alt="Теги и подсказки" src="screens/post-tag-suggestions-aligned.webp"></a><figcaption>Теги и подсказки</figcaption></figure>
+<figure><a href="screens/editor-link.webp"><img loading="lazy" alt="Параметры ссылки" src="screens/editor-link.webp"></a><figcaption>Параметры ссылки</figcaption></figure>
+<figure><a href="screens/editor-photos.webp"><img loading="lazy" alt="Добавление фотографий" src="screens/editor-photos.webp"></a><figcaption>Добавление фотографий</figcaption></figure></div></section>
+<section id="group-3"><h2>Профиль и аккаунт</h2><div class="grid"><figure><a href="screens/profile-stats-feed.webp"><img loading="lazy" alt="Профиль автора" src="screens/profile-stats-feed.webp"></a><figcaption>Профиль автора</figcaption></figure>
+<figure><a href="screens/profile-settings.webp"><img loading="lazy" alt="Настройки профиля" src="screens/profile-settings.webp"></a><figcaption>Настройки профиля</figcaption></figure>
+<figure><a href="screens/notifications-center.webp"><img loading="lazy" alt="Уведомления" src="screens/notifications-center.webp"></a><figcaption>Уведомления</figcaption></figure>
+<figure><a href="screens/sign-in-desktop.webp"><img loading="lazy" alt="Вход" src="screens/sign-in-desktop.webp"></a><figcaption>Вход</figcaption></figure>
+<figure><a href="screens/sign-up-desktop.webp"><img loading="lazy" alt="Регистрация" src="screens/sign-up-desktop.webp"></a><figcaption>Регистрация</figcaption></figure></div></section>
+</main></html>

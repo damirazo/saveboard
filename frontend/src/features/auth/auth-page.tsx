@@ -1,12 +1,9 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
-import { AppShell } from '../../components/layout/app-shell';
 import { AuthLayout, FormCard } from '../../components/layout/auth-layout';
 import { Button } from '../../components/ui/button';
 import { FormField, FormMessage } from '../../components/ui/form-field';
-import { Divider } from '../../components/ui/divider';
-import { OAuthPlaceholder } from '../../components/auth/oauth-placeholder';
 
 export type AuthValues = { username: string; email: string; login: string; password: string };
 type AuthPageProps = { mode: 'login' | 'register'; onSubmit: (values: AuthValues) => Promise<void> };
@@ -26,7 +23,7 @@ export function AuthPage({ mode, onSubmit }: AuthPageProps) {
     submitting.current = true; setPending(true);
     try { await onSubmit(values); } catch (e) { setError(e instanceof Error ? e.message : 'Не удалось выполнить запрос. Попробуйте снова.'); } finally { submitting.current = false; setPending(false); }
   }
-  return <AppShell><AuthLayout title={register ? 'Всё важное —\nв одном месте.' : 'Рады видеть\nвас снова.'} description="Сохраняйте страницы, записывайте мысли и возвращайтесь к нужному в подходящий момент.">
+  return <AuthLayout>
     <FormCard title={register ? 'Создать аккаунт' : 'Вход в Saveboard'} description={register ? 'Начните собирать свою библиотеку.' : 'Введите username или email и пароль.'} footer={<p className="auth-switch">{register ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}<Link to={register ? '/login' : '/register'}>{register ? 'Войти' : 'Зарегистрироваться'}</Link></p>}>
       <form onSubmit={event => { void submit(event); }} aria-label={register ? 'Регистрация' : 'Вход'} aria-busy={pending}>
         <fieldset disabled={pending} className="auth-fields">
@@ -36,7 +33,7 @@ export function AuthPage({ mode, onSubmit }: AuthPageProps) {
         </fieldset>
         {error && <FormMessage tone="error">{error}</FormMessage>}
         <Button className="auth-submit" type="submit" disabled={pending}>{pending ? 'Подождите…' : register ? 'Зарегистрироваться' : 'Войти'}<ArrowRight aria-hidden="true" /></Button>
-      </form><Divider /><OAuthPlaceholder />
+      </form>
     </FormCard>
-  </AuthLayout></AppShell>;
+  </AuthLayout>;
 }
