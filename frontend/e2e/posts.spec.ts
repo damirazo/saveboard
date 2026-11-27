@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 
 const user = '11111111-1111-4111-8111-111111111111';
 type Post = { id: string; author_id: string; author: string; title: string; type: string; visibility: string; status: string; markdown: string; url: string; tags: { id: string; title: string; name: string }[]; photos: { id: string; url: string }[]; created_at: string; save_copy?: boolean; create_thumbnail?: boolean; capture_state?: string; copy_url?: string; thumbnail_url?: string };
@@ -101,8 +101,11 @@ test('link options, pending capture, thumbnail and offline sandbox on desktop an
   expect(await page.locator('.post-link').textContent()).toHaveLength(300);await expect(page.locator('.post-link')).toHaveAttribute('href',url);
   Object.assign(posts[0]!,{capture_state:'pending'});await page.reload();
   await expect(page.getByRole('button',{name:'Показать копию'})).toHaveCount(0);
-  const cssID='a'.repeat(64);const imageID='b'.repeat(64);let externalRequests=0;
-  page.on('request',r=>{if(r.url().startsWith('https://external.invalid'))externalRequests++;});
+  const cssID='a'.repeat(64);const imageID='b'.repeat(64);
+  const externalRequests: Request[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).hostname === 'external.invalid') externalRequests.push(request);
+  });
   await page.route('**/api/v1/posts/*/copy',route=>route.fulfill({json:{html:`<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' data:; img-src data:; script-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'"><link rel="stylesheet" href="sbasset:${cssID}"></head><body><h1>Отрендеренный DOM</h1><img src="sbasset:${imageID}" alt="Локальная картинка"><img src="https://external.invalid/leak"><script>parent.document.body.dataset.leaked='yes'</script></body></html>`,assets:{[cssID]:{mime:'text/css',data:Buffer.from('h1{color:rgb(1, 2, 3)}').toString('base64'),path:'hash/css'},[imageID]:{mime:'image/png',data:png.toString('base64'),path:'hash/image'}},thumbnail:''}}));
   await page.route('**/api/v1/posts/*/thumbnail',route=>route.fulfill({contentType:'image/png',body:png}));
   Object.assign(posts[0]!,{capture_state:'ready',copy_url:`/api/v1/posts/${posts[0]!.id}/copy`,thumbnail_url:`/api/v1/posts/${posts[0]!.id}/thumbnail`});
@@ -112,7 +115,10 @@ test('link options, pending capture, thumbnail and offline sandbox on desktop an
   const frame=page.frameLocator('.archive-dialog iframe');await expect(frame.getByRole('heading')).toHaveText('Отрендеренный DOM');
   await expect(frame.getByRole('heading')).toHaveCSS('color','rgb(1, 2, 3)');
   await expect(frame.getByAltText('Локальная картинка')).toBeVisible();
-  expect(externalRequests).toBe(0);expect(await page.locator('body').getAttribute('data-leaked')).toBeNull();
+  await expect.poll(() => frame.locator('body').evaluate(body => body.ownerDocument.readyState)).toBe('complete');
+  // Chromium can emit a request event even when CSP blocks it before network access.
+  await expect.poll(() => externalRequests.filter(request => request.failure()?.errorText !== 'csp').length).toBe(0);
+  expect(await page.locator('body').getAttribute('data-leaked')).toBeNull();
   await expect(page.locator('.archive-dialog iframe')).toHaveAttribute('sandbox','');
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:'test-results/link-copy-mobile.png',fullPage:true});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
