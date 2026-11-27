@@ -60,11 +60,19 @@ func registerNotifications(api huma.API, deps Dependencies) {
 	})
 	huma.Register(api, op("notifications-unread", http.MethodGet, "/api/v1/notifications/unread"), func(ctx context.Context, in *struct {
 		Authorization string `header:"Authorization"`
-	}) (*NotificationCountOutput, error) { user, e := viewer(ctx, in.Authorization); if e != nil {
-		return nil, e
-	}; count, e := deps.Notifications.Unread(ctx, user); if e != nil {
-		return nil, notificationError(e)
-	}; out := &NotificationCountOutput{}; out.Body.Count = count; return out, nil })
+	}) (*NotificationCountOutput, error) {
+		user, e := viewer(ctx, in.Authorization)
+		if e != nil {
+			return nil, e
+		}
+		count, e := deps.Notifications.Unread(ctx, user)
+		if e != nil {
+			return nil, notificationError(e)
+		}
+		out := &NotificationCountOutput{}
+		out.Body.Count = count
+		return out, nil
+	})
 	huma.Register(api, op("notifications-get", http.MethodGet, "/api/v1/notifications/{id}"), func(ctx context.Context, in *PostIDInput) (*NotificationOutput, error) {
 		user, e := viewer(ctx, in.Authorization)
 		if e != nil {

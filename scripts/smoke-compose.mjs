@@ -35,7 +35,9 @@ assert.ok(Array.isArray(feed.items));
 assert.equal(typeof feed.total, 'number');
 assert.ok(feed.items.every(post => post.status === 'published' && post.visibility === 'public'));
 assert.equal((await get('/api/v1/posts?scope=mine')).status, 401);
-assert.equal((await get('/api/v1/post-tags?q=test')).status, 401);
+const suggestions = await get('/api/v1/post-tags?q=test');
+assert.equal(suggestions.status, 200);
+assert.ok(Array.isArray(await suggestions.json()), 'guest tag suggestions must be a list');
 const guestCreate = await fetch(`${base}/api/v1/posts`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ title: 'Smoke access check', type: 'note', visibility: 'private', markdown: 'Test', tags: [{ id: '', title: 'Test' }], url: '', photo_ids: [] }),
